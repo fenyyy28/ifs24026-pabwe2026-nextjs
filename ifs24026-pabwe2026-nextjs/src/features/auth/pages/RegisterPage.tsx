@@ -26,7 +26,9 @@ export default function RegisterPage() {
     (state) => state.auth
   );
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (
+    event: FormEvent<HTMLFormElement>
+  ) => {
     event.preventDefault();
 
     if (!name.value.trim()) {
@@ -34,6 +36,7 @@ export default function RegisterPage() {
         "Nama belum diisi",
         "Silakan masukkan nama lengkap kamu."
       );
+
       return;
     }
 
@@ -42,6 +45,7 @@ export default function RegisterPage() {
         "Email belum diisi",
         "Silakan masukkan email kamu."
       );
+
       return;
     }
 
@@ -50,6 +54,7 @@ export default function RegisterPage() {
         "Password belum diisi",
         "Silakan masukkan password kamu."
       );
+
       return;
     }
 
@@ -58,6 +63,7 @@ export default function RegisterPage() {
         "Password terlalu pendek",
         "Password minimal terdiri dari 6 karakter."
       );
+
       return;
     }
 
@@ -66,6 +72,7 @@ export default function RegisterPage() {
         "Password tidak sama",
         "Pastikan konfirmasi password sama dengan password."
       );
+
       return;
     }
 
@@ -83,7 +90,7 @@ export default function RegisterPage() {
         "Akun berhasil dibuat. Silakan masuk menggunakan akun kamu."
       );
 
-      router.replace("/login");
+      router.replace("/auth/login");
     } else {
       await showErrorDialog(
         "Registrasi gagal",
@@ -97,7 +104,10 @@ export default function RegisterPage() {
       title="Buat akun baru"
       description="Daftarkan akun kamu untuk mulai menggunakan Delcom Posts."
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-4"
+      >
         <div>
           <label
             htmlFor="name"
@@ -179,14 +189,16 @@ export default function RegisterPage() {
           disabled={isAuthRegister}
           className="w-full rounded-xl bg-yellow-400 px-4 py-3 font-semibold text-slate-900 shadow-sm transition hover:bg-yellow-500 focus:outline-none focus:ring-4 focus:ring-yellow-100 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isAuthRegister ? "Mendaftarkan..." : "Daftar"}
+          {isAuthRegister
+            ? "Mendaftarkan..."
+            : "Daftar"}
         </button>
       </form>
 
       <p className="mt-6 text-center text-sm text-slate-500">
         Sudah punya akun?{" "}
         <Link
-          href="/login"
+          href="/auth/login"
           className="font-semibold text-yellow-600 hover:text-yellow-700"
         >
           Masuk sekarang

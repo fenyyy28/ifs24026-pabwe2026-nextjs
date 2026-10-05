@@ -66,12 +66,6 @@ export interface CommentRequest {
   comment: string;
 }
 
-/**
- * Mengambil seluruh postingan.
- *
- * isMe = true akan mengirim is_me=1
- * untuk mengambil postingan milik pengguna aktif.
- */
 export async function getPosts(
   isMe = false
 ): Promise<PostsResponse> {
@@ -81,9 +75,6 @@ export async function getPosts(
   });
 }
 
-/**
- * Mengambil detail postingan berdasarkan ID.
- */
 export async function getPost(
   postId: number
 ): Promise<PostResponse> {
@@ -92,9 +83,6 @@ export async function getPost(
   });
 }
 
-/**
- * Menambahkan postingan baru.
- */
 export async function addPost(
   data: PostDescriptionRequest
 ): Promise<AddPostResponse> {
@@ -104,9 +92,6 @@ export async function addPost(
   });
 }
 
-/**
- * Memperbarui deskripsi postingan.
- */
 export async function updatePost(
   postId: number,
   data: PostDescriptionRequest
@@ -120,9 +105,6 @@ export async function updatePost(
   );
 }
 
-/**
- * Mengunggah atau mengganti cover postingan.
- */
 export async function updatePostCover(
   postId: number,
   file: File
@@ -140,9 +122,6 @@ export async function updatePostCover(
   );
 }
 
-/**
- * Menghapus satu postingan.
- */
 export async function deletePost(
   postId: number
 ): Promise<BasicPostResponse> {
@@ -154,12 +133,6 @@ export async function deletePost(
   );
 }
 
-/**
- * Memberikan atau membatalkan like.
- *
- * like = 1 -> like
- * like = 0 -> unlike
- */
 export async function likePost(
   postId: number,
   data: LikeRequest
@@ -173,9 +146,6 @@ export async function likePost(
   );
 }
 
-/**
- * Menambahkan komentar.
- */
 export async function addComment(
   postId: number,
   data: CommentRequest
@@ -189,9 +159,6 @@ export async function addComment(
   );
 }
 
-/**
- * Menghapus komentar pengguna pada postingan.
- */
 export async function deleteComment(
   postId: number
 ): Promise<BasicPostResponse> {
@@ -203,9 +170,6 @@ export async function deleteComment(
   );
 }
 
-/**
- * Menghapus seluruh postingan milik pengguna aktif.
- */
 export async function deleteAllPosts(): Promise<BasicPostResponse> {
   return apiFetch<BasicPostResponse>("/api/v1/posts", {
     method: "DELETE",

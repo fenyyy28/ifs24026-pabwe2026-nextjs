@@ -35,7 +35,7 @@ export default function PostLayout({
     const token = getAccessToken();
 
     if (!token) {
-      router.replace("/login");
+      router.replace("/auth/login");
       return;
     }
 
@@ -57,7 +57,7 @@ export default function PostLayout({
     }
 
     if (usersError && !profile) {
-      router.replace("/login");
+      router.replace("/auth/login");
     }
   }, [
     mounted,

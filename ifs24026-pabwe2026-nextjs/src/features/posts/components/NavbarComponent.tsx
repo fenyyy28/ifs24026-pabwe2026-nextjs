@@ -14,7 +14,9 @@ export default function NavbarComponent() {
   const dispatch = useAppDispatch();
 
   const { user } = useAppSelector((state) => state.auth);
-  const profile = useAppSelector((state) => state.users.profile);
+  const profile = useAppSelector(
+    (state) => state.users.profile
+  );
 
   const [open, setOpen] = useState(false);
 
@@ -24,13 +26,18 @@ export default function NavbarComponent() {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
+        !dropdownRef.current.contains(
+          event.target as Node
+        )
       ) {
         setOpen(false);
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener(
+      "mousedown",
+      handleClickOutside
+    );
 
     return () => {
       document.removeEventListener(
@@ -41,14 +48,16 @@ export default function NavbarComponent() {
   }, []);
 
   const displayName =
-  profile?.name || user?.name || "Pengguna";
+    profile?.name || user?.name || "Pengguna";
 
-const displayEmail =
-  profile?.email || user?.email || "";
+  const displayEmail =
+    profile?.email || user?.email || "";
 
-const photo = profile?.photo || null;
+  const photo = profile?.photo || null;
 
-  const initial = displayName.charAt(0).toUpperCase();
+  const initial = displayName
+    .charAt(0)
+    .toUpperCase();
 
   const handleLogout = async () => {
     const confirmed = await showConfirmDialog(
@@ -62,7 +71,7 @@ const photo = profile?.photo || null;
 
     await dispatch(authLogout());
 
-    router.replace("/login");
+    router.replace("/auth/login");
   };
 
   const isProfileActive =
@@ -73,10 +82,13 @@ const photo = profile?.photo || null;
       <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3">
           <Link
-            href="/dashboard"
+            href="/"
             className="text-xl font-bold tracking-tight text-slate-900"
           >
-            Delcom<span className="text-yellow-500">Posts</span>
+            Delcom
+            <span className="text-yellow-500">
+              Posts
+            </span>
           </Link>
         </div>
 
@@ -86,7 +98,9 @@ const photo = profile?.photo || null;
         >
           <button
             type="button"
-            onClick={() => setOpen((value) => !value)}
+            onClick={() =>
+              setOpen((value) => !value)
+            }
             className="flex items-center gap-3 rounded-xl px-2 py-1.5 transition hover:bg-slate-100"
             aria-expanded={open}
             aria-haspopup="menu"

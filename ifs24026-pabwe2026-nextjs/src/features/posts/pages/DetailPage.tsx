@@ -29,7 +29,8 @@ export default function DetailPage() {
   const params = useParams();
   const router = useRouter();
 
-  const postId = Number(params.id);
+  // Route sekarang menggunakan [postId]
+  const postId = Number(params.postId);
 
   const [post, setPost] = useState<Post | null>(null);
   const [currentUserId, setCurrentUserId] =
@@ -111,7 +112,7 @@ export default function DetailPage() {
           "ID postingan tidak valid."
         );
 
-        router.replace("/dashboard");
+        router.replace("/");
         return;
       }
 
@@ -143,7 +144,7 @@ export default function DetailPage() {
             : "Postingan tidak dapat dimuat."
         );
 
-        router.replace("/dashboard");
+        router.replace("/");
       } finally {
         setLoadingPost(false);
       }
@@ -427,7 +428,7 @@ export default function DetailPage() {
         "Postingan berhasil dihapus."
       );
 
-      router.replace("/dashboard");
+      router.replace("/");
     } catch (error) {
       await showErrorDialog(
         "Gagal menghapus",
@@ -519,7 +520,7 @@ export default function DetailPage() {
         {/* Kembali */}
         <div className="mb-5">
           <Link
-            href="/dashboard"
+            href="/"
             className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-yellow-600"
           >
             ← Kembali ke postingan

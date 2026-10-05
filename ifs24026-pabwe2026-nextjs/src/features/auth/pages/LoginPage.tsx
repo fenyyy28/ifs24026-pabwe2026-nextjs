@@ -33,6 +33,7 @@ export default function LoginPage() {
         "Email belum diisi",
         "Silakan masukkan email kamu."
       );
+
       return;
     }
 
@@ -41,6 +42,7 @@ export default function LoginPage() {
         "Password belum diisi",
         "Silakan masukkan password kamu."
       );
+
       return;
     }
 
@@ -57,7 +59,7 @@ export default function LoginPage() {
         "Selamat datang kembali!"
       );
 
-      router.replace("/dashboard");
+      router.replace("/");
       return;
     }
 
@@ -128,13 +130,15 @@ export default function LoginPage() {
           disabled={isAuthLogin}
           className="w-full rounded-xl bg-yellow-400 px-4 py-3 text-sm font-bold text-slate-900 transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isAuthLogin ? "Memproses..." : "Masuk"}
+          {isAuthLogin
+            ? "Memproses..."
+            : "Masuk"}
         </button>
 
         <p className="text-center text-sm text-slate-500">
           Belum punya akun?{" "}
           <Link
-            href="/register"
+            href="/auth/register"
             className="font-semibold text-yellow-600 transition hover:text-yellow-700"
           >
             Daftar sekarang
