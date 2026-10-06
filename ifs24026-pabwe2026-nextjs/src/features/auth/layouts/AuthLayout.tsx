@@ -14,7 +14,7 @@ export default function AuthLayout({
   description = "Masuk atau daftar untuk melanjutkan ke Delcom Posts.",
 }: AuthLayoutProps) {
   return (
-    <main className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50">
       <div className="grid min-h-screen lg:grid-cols-2">
         {/* Banner */}
         <section className="relative hidden overflow-hidden bg-yellow-400 lg:flex">
@@ -34,11 +34,11 @@ export default function AuthLayout({
                 Platform Postingan
               </div>
 
-              <h1 className="text-5xl font-bold leading-tight tracking-tight text-slate-900">
+              <p className="text-5xl font-bold leading-tight tracking-tight text-slate-900">
                 Bagikan cerita,
                 <br />
                 temukan inspirasi.
-              </h1>
+              </p>
 
               <p className="mt-6 max-w-md text-lg leading-8 text-slate-700">
                 Buat akun dan nikmati pengalaman berbagi postingan
@@ -65,9 +65,9 @@ export default function AuthLayout({
             </div>
 
             <div className="mb-8">
-              <h2 className="text-3xl font-bold tracking-tight text-slate-900">
+              <h1 className="text-3xl font-bold tracking-tight text-slate-900">
                 {title}
-              </h2>
+              </h1>
 
               <p className="mt-2 text-sm leading-6 text-slate-500">
                 {description}
@@ -78,6 +78,6 @@ export default function AuthLayout({
           </div>
         </section>
       </div>
-    </main>
+    </div>
   );
 }
