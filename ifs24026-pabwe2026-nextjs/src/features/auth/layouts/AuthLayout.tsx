@@ -14,7 +14,7 @@ export default function AuthLayout({
   description = "Masuk atau daftar untuk melanjutkan ke Delcom Posts.",
 }: AuthLayoutProps) {
   return (
-    <div className="min-h-screen bg-slate-50">
+    <main className="min-h-screen bg-slate-50">
       <div className="grid min-h-screen lg:grid-cols-2">
         {/* Banner */}
         <section className="relative hidden overflow-hidden bg-yellow-400 lg:flex">
@@ -78,6 +78,6 @@ export default function AuthLayout({
           </div>
         </section>
       </div>
-    </div>
+    </main>
   );
 }
