@@ -140,7 +140,7 @@ export default function LoginPage() {
           Belum punya akun?{" "}
           <Link
             href="/auth/register"
-            className="font-semibold text-yellow-600 transition hover:text-yellow-700"
+            className="font-semibold text-yellow-700 transition hover:text-yellow-800"
           >
             Daftar sekarang
           </Link>

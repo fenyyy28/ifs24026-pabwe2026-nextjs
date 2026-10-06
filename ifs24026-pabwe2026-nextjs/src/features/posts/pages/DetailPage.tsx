@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { ChangeEvent, FormEvent } from "react";
@@ -31,7 +30,9 @@ export default function DetailPage() {
   const postId = Number(params.postId);
 
   const [post, setPost] = useState<Post | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(
+    null
+  );
 
   const [description, setDescription] = useState("");
   const [comment, setComment] = useState("");
@@ -41,8 +42,10 @@ export default function DetailPage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isChangingCover, setIsChangingCover] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
-  const [isDeletingComment, setIsDeletingComment] = useState(false);
+  const [isSubmittingComment, setIsSubmittingComment] =
+    useState(false);
+  const [isDeletingComment, setIsDeletingComment] =
+    useState(false);
 
   const isMyPost =
     post !== null &&
@@ -115,10 +118,10 @@ export default function DetailPage() {
   };
 
   const handleLike = async () => {
-  /* v8 ignore next -- @preserve */
-if (!post || isLiking) {
-  return;
-}
+    /* v8 ignore next -- @preserve */
+    if (!post || isLiking) {
+      return;
+    }
 
     setIsLiking(true);
 
@@ -146,9 +149,9 @@ if (!post || isLiking) {
     event.preventDefault();
 
     /* v8 ignore next -- @preserve */
-if (!post || isSubmittingComment) {
-  return;
-}
+    if (!post || isSubmittingComment) {
+      return;
+    }
 
     const value = comment.trim();
 
@@ -189,10 +192,10 @@ if (!post || isSubmittingComment) {
   };
 
   const handleUpdatePost = async () => {
-   /* v8 ignore next -- @preserve */
-if (!post) {
-  return;
-}
+    /* v8 ignore next -- @preserve */
+    if (!post) {
+      return;
+    }
 
     const value = description.trim();
 
@@ -236,9 +239,10 @@ if (!post) {
     event: ChangeEvent<HTMLInputElement>
   ) => {
     /* v8 ignore next -- @preserve */
-if (!post) {
-  return;
-}
+    if (!post) {
+      return;
+    }
+
     const file = event.target.files?.[0];
 
     if (!file) {
@@ -282,9 +286,9 @@ if (!post) {
 
   const handleDeletePost = async () => {
     /* v8 ignore next -- @preserve */
-if (!post || isDeleting) {
-  return;
-}
+    if (!post || isDeleting) {
+      return;
+    }
 
     const confirmed = await showConfirmDialog(
       "Hapus postingan?",
@@ -320,9 +324,9 @@ if (!post || isDeleting) {
 
   const handleDeleteComment = async () => {
     /* v8 ignore next -- @preserve */
-if (!post || !post.my_comment || isDeletingComment) {
-  return;
-}
+    if (!post || !post.my_comment || isDeletingComment) {
+      return;
+    }
 
     const confirmed = await showConfirmDialog(
       "Hapus komentar?",
@@ -372,7 +376,7 @@ if (!post || !post.my_comment || isDeletingComment) {
             <button
               type="button"
               onClick={() => router.replace("/")}
-              className="mt-6 rounded-xl bg-yellow-500 px-5 py-3 font-semibold text-white transition hover:bg-yellow-600"
+              className="mt-6 rounded-xl bg-yellow-700 px-5 py-3 font-semibold text-white transition hover:bg-yellow-800"
             >
               Kembali
             </button>
@@ -387,7 +391,7 @@ if (!post || !post.my_comment || isDeletingComment) {
       <main className="min-h-screen bg-slate-50 px-4 py-10">
         <div className="mx-auto max-w-3xl">
           <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
-            <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-yellow-200 border-t-yellow-500" />
+            <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-yellow-200 border-t-yellow-700" />
 
             <p className="mt-4 text-slate-600">
               Memuat postingan...
@@ -403,7 +407,10 @@ if (!post || !post.my_comment || isDeletingComment) {
   const authorName = post.author.name?.trim() || "Pengguna";
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8">
+    <main
+      className="min-h-screen bg-slate-50 px-4 py-8"
+      aria-label="Detail postingan"
+    >
       <div className="mx-auto max-w-3xl">
         <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
           <div className="relative">
@@ -414,7 +421,7 @@ if (!post || !post.my_comment || isDeletingComment) {
                 className="h-72 w-full object-cover"
               />
             ) : (
-              <div className="flex h-72 w-full items-center justify-center bg-slate-200 text-slate-500">
+              <div className="flex h-72 w-full items-center justify-center bg-slate-200 text-slate-600">
                 Tidak ada cover
               </div>
             )}
@@ -431,13 +438,17 @@ if (!post || !post.my_comment || isDeletingComment) {
                 </button>
 
                 <label className="cursor-pointer rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow transition hover:bg-slate-100">
-                  {isChangingCover ? "Mengubah..." : "Cover"}
+                  {isChangingCover
+                    ? "Mengubah..."
+                    : "Cover"}
 
                   <input
                     type="file"
                     accept="image/*"
                     className="hidden"
-                    disabled={isChangingCover || isDeleting}
+                    disabled={
+                      isChangingCover || isDeleting
+                    }
                     onChange={handleChangeCover}
                   />
                 </label>
@@ -450,9 +461,11 @@ if (!post || !post.my_comment || isDeletingComment) {
                     isUpdating ||
                     isChangingCover
                   }
-                  className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {isDeleting ? "Menghapus..." : "Hapus"}
+                  {isDeleting
+                    ? "Menghapus..."
+                    : "Hapus"}
                 </button>
               </div>
             )}
@@ -477,7 +490,7 @@ if (!post || !post.my_comment || isDeletingComment) {
                   {authorName}
                 </p>
 
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-slate-600">
                   {new Date(
                     post.created_at
                   ).toLocaleDateString("id-ID")}
@@ -487,6 +500,10 @@ if (!post || !post.my_comment || isDeletingComment) {
 
             {isEditing ? (
               <div className="mt-6">
+                <h1 className="sr-only">
+                  Edit postingan {authorName}
+                </h1>
+
                 <textarea
                   value={description}
                   onChange={(event) =>
@@ -501,7 +518,7 @@ if (!post || !post.my_comment || isDeletingComment) {
                     type="button"
                     onClick={handleUpdatePost}
                     disabled={isUpdating}
-                    className="rounded-xl bg-yellow-500 px-5 py-3 font-semibold text-white transition hover:bg-yellow-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-xl bg-yellow-700 px-5 py-3 font-semibold text-white transition hover:bg-yellow-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isUpdating
                       ? "Menyimpan..."
@@ -522,9 +539,9 @@ if (!post || !post.my_comment || isDeletingComment) {
                 </div>
               </div>
             ) : (
-              <p className="mt-6 whitespace-pre-wrap text-lg leading-8 text-slate-800">
+              <h1 className="mt-6 whitespace-pre-wrap text-lg font-semibold leading-8 text-slate-800">
                 {post.description}
-              </p>
+              </h1>
             )}
 
             <div className="mt-6 flex items-center gap-3">
@@ -579,7 +596,7 @@ if (!post || !post.my_comment || isDeletingComment) {
                 <button
                   type="submit"
                   disabled={isSubmittingComment}
-                  className="mt-3 rounded-xl bg-yellow-500 px-5 py-3 font-semibold text-white transition hover:bg-yellow-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-3 rounded-xl bg-yellow-700 px-5 py-3 font-semibold text-white transition hover:bg-yellow-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isSubmittingComment
                     ? "Mengirim..."
@@ -633,4 +650,3 @@ if (!post || !post.my_comment || isDeletingComment) {
     </main>
   );
 }
-

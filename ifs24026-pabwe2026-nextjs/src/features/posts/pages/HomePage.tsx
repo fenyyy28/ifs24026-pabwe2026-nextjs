@@ -94,6 +94,7 @@ export default function HomePage() {
         {isPost && (
           <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center">
             <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-yellow-200 border-t-yellow-400" />
+
             <p className="text-sm font-medium text-slate-600">
               Memuat postingan...
             </p>
@@ -161,14 +162,14 @@ export default function HomePage() {
                         {post.author.name}
                       </p>
 
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-slate-600">
                         {formatDate(post.created_at)}
                       </p>
                     </div>
                   </div>
 
                   <Link href={`/posts/${post.id}`}>
-                    <h2 className="line-clamp-3 text-base font-semibold leading-6 text-slate-900 transition hover:text-yellow-600">
+                    <h2 className="line-clamp-3 text-base font-semibold leading-6 text-slate-900 transition hover:text-yellow-700">
                       {post.description}
                     </h2>
                   </Link>

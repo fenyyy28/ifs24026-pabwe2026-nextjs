@@ -21,7 +21,8 @@ export default function PostLayout({
   const dispatch = useAppDispatch();
 
   const [mounted, setMounted] = useState(false);
-  const [authenticated, setAuthenticated] = useState(false);
+  const [authenticated, setAuthenticated] =
+    useState(false);
 
   const {
     profile,
@@ -81,7 +82,7 @@ export default function PostLayout({
 
   if (!profile) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-50">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
         <div className="text-center">
           <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-yellow-200 border-t-yellow-400" />
 
@@ -89,7 +90,7 @@ export default function PostLayout({
             Memuat akun...
           </p>
         </div>
-      </main>
+      </div>
     );
   }
 
@@ -100,11 +101,11 @@ export default function PostLayout({
       <div className="flex">
         <SidebarComponent />
 
-        <main className="min-w-0 flex-1 lg:pl-64">
+        <div className="min-w-0 flex-1 lg:pl-64">
           <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
             {children}
           </div>
-        </main>
+        </div>
       </div>
     </div>
   );

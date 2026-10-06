@@ -86,7 +86,7 @@ export default function NavbarComponent() {
             className="text-xl font-bold tracking-tight text-slate-900"
           >
             Delcom
-            <span className="text-yellow-500">
+            <span className="text-yellow-700">
               Posts
             </span>
           </Link>
@@ -128,7 +128,7 @@ export default function NavbarComponent() {
             </div>
 
             <svg
-              className={`hidden h-4 w-4 text-slate-400 transition-transform sm:block ${
+              className={`hidden h-4 w-4 text-slate-500 transition-transform sm:block ${
                 open ? "rotate-180" : ""
               }`}
               viewBox="0 0 20 20"
