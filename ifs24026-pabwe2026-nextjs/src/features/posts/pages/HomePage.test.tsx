@@ -18,7 +18,7 @@ const mocks = vi.hoisted(() => ({
   searchParamsGet: vi.fn(),
   addModalProps: {
     open: false,
-    onClose: vi.fn(),
+    onClose: (() => undefined) as () => void,
   },
   selectorState: {
     posts: [] as any[],

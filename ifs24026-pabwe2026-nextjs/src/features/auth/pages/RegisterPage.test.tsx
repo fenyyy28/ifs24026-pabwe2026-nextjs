@@ -40,7 +40,7 @@ vi.mock("@/hooks/redux", () => ({
 vi.mock(
   "@/features/auth/states/reducer",
   async (importOriginal) => {
-    const actual = await importOriginal();
+    const actual = await importOriginal<typeof import("@/features/auth/states/reducer")>();
 
     return {
       ...actual,

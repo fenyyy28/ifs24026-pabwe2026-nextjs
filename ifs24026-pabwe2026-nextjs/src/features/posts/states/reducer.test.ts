@@ -79,7 +79,7 @@ describe("Posts reducer", () => {
   it("fetchPosts pending", () => {
     const state = reducer(
       initialState,
-      fetchPosts.pending("request")
+      fetchPosts.pending("request", false)
     );
 
     expect(state.isPost).toBe(true);
@@ -639,7 +639,7 @@ describe("Posts async thunks", () => {
       data: { posts: [post] },
     } as any);
 
-    await fetchPosts()(vi.fn(), vi.fn(), undefined);
+    await fetchPosts(false)(vi.fn(), vi.fn(), undefined);
 
     expect(getPosts).toHaveBeenCalledWith(false);
   });
