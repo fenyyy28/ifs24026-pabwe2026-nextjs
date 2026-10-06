@@ -9,7 +9,9 @@ import { showErrorDialog } from "@/helpers/toolsHelper";
 export default function UsersPage() {
   const dispatch = useAppDispatch();
 
-  const { users, error } = useAppSelector((state) => state.users);
+  const { users, error } = useAppSelector(
+    (state) => state.users
+  );
 
   const [search, setSearch] = useState("");
 
@@ -19,11 +21,16 @@ export default function UsersPage() {
 
   useEffect(() => {
     if (error) {
-      showErrorDialog("Gagal memuat pengguna", error);
+      showErrorDialog(
+        "Gagal memuat pengguna",
+        error
+      );
     }
   }, [error]);
 
-  const safeUsers = Array.isArray(users) ? users : [];
+  const safeUsers = Array.isArray(users)
+    ? users
+    : [];
 
   const filteredUsers = useMemo(() => {
     const keyword = search.trim().toLowerCase();
@@ -34,16 +41,20 @@ export default function UsersPage() {
 
     return safeUsers.filter(
       (user) =>
-        user.name.toLowerCase().includes(keyword) ||
-        user.email.toLowerCase().includes(keyword)
+        user.name
+          .toLowerCase()
+          .includes(keyword) ||
+        user.email
+          .toLowerCase()
+          .includes(keyword)
     );
   }, [safeUsers, search]);
 
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-10">
+    <div className="min-h-screen bg-slate-50 px-6 py-10">
       <div className="mx-auto max-w-6xl">
         <div className="mb-8">
-          <p className="mb-2 text-sm font-semibold text-yellow-600">
+          <p className="mb-2 text-sm font-semibold text-yellow-700">
             Pengguna
           </p>
 
@@ -60,7 +71,9 @@ export default function UsersPage() {
           <input
             type="search"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) =>
+              setSearch(event.target.value)
+            }
             placeholder="Cari nama atau email pengguna..."
             className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100"
           />
@@ -85,7 +98,9 @@ export default function UsersPage() {
                   className="flex items-center gap-4 px-6 py-5 transition hover:bg-yellow-50/50"
                 >
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-yellow-400 text-lg font-bold text-slate-900">
-                    {user.name.charAt(0).toUpperCase()}
+                    {user.name
+                      .charAt(0)
+                      .toUpperCase()}
                   </div>
 
                   <div className="min-w-0">
@@ -104,9 +119,10 @@ export default function UsersPage() {
         </div>
 
         <p className="mt-4 text-sm text-slate-500">
-          Menampilkan {filteredUsers.length} dari {safeUsers.length} pengguna.
+          Menampilkan {filteredUsers.length} dari{" "}
+          {safeUsers.length} pengguna.
         </p>
       </div>
-    </main>
+    </div>
   );
 }

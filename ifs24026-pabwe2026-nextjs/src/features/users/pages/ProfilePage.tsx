@@ -72,7 +72,9 @@ export default function ProfilePage() {
     } else {
       await showErrorDialog(
         "Gagal memperbarui profil",
-        (result.payload as string) || error || "Terjadi kesalahan."
+        (result.payload as string) ||
+          error ||
+          "Terjadi kesalahan."
       );
     }
   };
@@ -94,7 +96,9 @@ export default function ProfilePage() {
       return;
     }
 
-    const result = await dispatch(changeProfilePhoto(file));
+    const result = await dispatch(
+      changeProfilePhoto(file)
+    );
 
     if (changeProfilePhoto.fulfilled.match(result)) {
       await showSuccessDialog(
@@ -104,7 +108,9 @@ export default function ProfilePage() {
     } else {
       await showErrorDialog(
         "Gagal memperbarui foto",
-        (result.payload as string) || error || "Terjadi kesalahan."
+        (result.payload as string) ||
+          error ||
+          "Terjadi kesalahan."
       );
     }
 
@@ -132,7 +138,10 @@ export default function ProfilePage() {
       return;
     }
 
-    if (newPassword.value !== confirmPassword.value) {
+    if (
+      newPassword.value !==
+      confirmPassword.value
+    ) {
       await showErrorDialog(
         "Password tidak sama",
         "Konfirmasi password harus sama dengan password baru."
@@ -147,7 +156,9 @@ export default function ProfilePage() {
       })
     );
 
-    if (changeProfilePassword.fulfilled.match(result)) {
+    if (
+      changeProfilePassword.fulfilled.match(result)
+    ) {
       oldPassword.setValue("");
       newPassword.setValue("");
       confirmPassword.setValue("");
@@ -159,26 +170,28 @@ export default function ProfilePage() {
     } else {
       await showErrorDialog(
         "Gagal mengubah password",
-        (result.payload as string) || error || "Terjadi kesalahan."
+        (result.payload as string) ||
+          error ||
+          "Terjadi kesalahan."
       );
     }
   };
 
   if (isProfile && !profile) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-6">
         <p className="text-sm text-slate-500">
           Memuat profil...
         </p>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-10">
+    <div className="min-h-screen bg-slate-50 px-6 py-10">
       <div className="mx-auto max-w-3xl">
         <div className="mb-8">
-          <p className="mb-2 text-sm font-semibold text-yellow-600">
+          <p className="mb-2 text-sm font-semibold text-yellow-700">
             Akun Saya
           </p>
 
@@ -212,7 +225,9 @@ export default function ProfilePage() {
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  profile?.name?.charAt(0).toUpperCase() || "U"
+                  profile?.name
+                    ?.charAt(0)
+                    .toUpperCase() || "U"
                 )}
               </div>
 
@@ -225,10 +240,11 @@ export default function ProfilePage() {
                   {profile?.email || "-"}
                 </p>
 
-                <label className="mt-2 inline-block cursor-pointer text-sm font-semibold text-yellow-600 hover:text-yellow-700">
+                <label className="mt-2 inline-block cursor-pointer text-sm font-semibold text-yellow-700 hover:text-yellow-800">
                   {isChangeProfilePhoto
                     ? "Mengunggah..."
                     : "Ganti foto"}
+
                   <input
                     type="file"
                     accept="image/*"
@@ -240,7 +256,10 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <form onSubmit={handleProfileSubmit} className="space-y-5">
+            <form
+              onSubmit={handleProfileSubmit}
+              className="space-y-5"
+            >
               <div>
                 <label
                   htmlFor="profile-name"
@@ -297,8 +316,7 @@ export default function ProfilePage() {
               </h2>
 
               <p className="mt-1 text-sm text-slate-500">
-                Gunakan password baru yang mudah kamu ingat tetapi
-                tetap aman.
+                Gunakan password baru yang mudah kamu ingat tetapi tetap aman.
               </p>
             </div>
 
@@ -373,6 +391,6 @@ export default function ProfilePage() {
           </section>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

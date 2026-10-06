@@ -68,10 +68,6 @@ export default function PostLayout({
     router,
   ]);
 
-  /*
-   * Jangan membaca localStorage atau profile
-   * sebelum component selesai mount di browser.
-   */
   if (!mounted) {
     return null;
   }
@@ -101,11 +97,14 @@ export default function PostLayout({
       <div className="flex">
         <SidebarComponent />
 
-        <div className="min-w-0 flex-1 lg:pl-64">
+        <main
+          className="min-w-0 flex-1 lg:pl-64"
+          aria-label="Konten utama"
+        >
           <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
             {children}
           </div>
-        </div>
+        </main>
       </div>
     </div>
   );
