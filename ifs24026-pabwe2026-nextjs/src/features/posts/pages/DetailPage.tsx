@@ -362,7 +362,7 @@ export default function DetailPage() {
 
   if (!Number.isFinite(postId) || postId <= 0) {
     return (
-      <main className="min-h-screen bg-slate-50 px-4 py-10">
+      <div className="min-h-screen bg-slate-50 px-4 py-10">
         <div className="mx-auto max-w-3xl">
           <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
             <h1 className="text-2xl font-bold text-slate-900">
@@ -382,13 +382,13 @@ export default function DetailPage() {
             </button>
           </div>
         </div>
-      </main>
+      </div>
     );
   }
 
   if (!post || currentUserId === null) {
     return (
-      <main className="min-h-screen bg-slate-50 px-4 py-10">
+      <div className="min-h-screen bg-slate-50 px-4 py-10">
         <div className="mx-auto max-w-3xl">
           <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
             <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-yellow-200 border-t-yellow-700" />
@@ -398,7 +398,7 @@ export default function DetailPage() {
             </p>
           </div>
         </div>
-      </main>
+      </div>
     );
   }
 
@@ -407,10 +407,7 @@ export default function DetailPage() {
   const authorName = post.author.name?.trim() || "Pengguna";
 
   return (
-    <main
-      className="min-h-screen bg-slate-50 px-4 py-8"
-      aria-label="Detail postingan"
-    >
+    <div className="min-h-screen bg-slate-50 px-4 py-8">
       <div className="mx-auto max-w-3xl">
         <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
           <div className="relative">
@@ -647,6 +644,6 @@ export default function DetailPage() {
           </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
