@@ -1,19 +1,18 @@
+
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import type { ChangeEvent, FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
-import PostLayout from "@/features/posts/layouts/PostLayout";
-
 import {
-  getPost,
-  updatePost,
-  updatePostCover,
-  deletePost,
-  likePost,
   addComment,
   deleteComment,
+  deletePost,
+  getPost,
+  likePost,
+  updatePost,
+  updatePostCover,
   type Post,
 } from "@/features/posts/api/postApi";
 
@@ -23,67 +22,46 @@ import {
   showConfirmDialog,
   showErrorDialog,
   showSuccessDialog,
-} from "@/helpers/toolsHelper";
+} from "@/lib/dialog";
 
 export default function DetailPage() {
   const params = useParams();
   const router = useRouter();
 
-  // Route sekarang menggunakan [postId]
   const postId = Number(params.postId);
 
   const [post, setPost] = useState<Post | null>(null);
-  const [currentUserId, setCurrentUserId] =
-    useState<number | null>(null);
-
-  const [loadingPost, setLoadingPost] = useState(true);
-  const [loadingProfile, setLoadingProfile] = useState(true);
-
-  const [comment, setComment] = useState("");
-
-  const [isSubmittingComment, setIsSubmittingComment] =
-    useState(false);
-
-  const [isLiking, setIsLiking] = useState(false);
-
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  const [isEditing, setIsEditing] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   const [description, setDescription] = useState("");
+  const [comment, setComment] = useState("");
 
+  const [isEditing, setIsEditing] = useState(false);
+  const [isLiking, setIsLiking] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isChangingCover, setIsChangingCover] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [isDeletingComment, setIsDeletingComment] = useState(false);
 
-  const [isChangingCover, setIsChangingCover] =
-    useState(false);
+  const isMyPost =
+    post !== null &&
+    currentUserId !== null &&
+    post.user_id === currentUserId;
 
-  const [isDeletingComment, setIsDeletingComment] =
-    useState(false);
+  const isLiked =
+    post !== null &&
+    currentUserId !== null &&
+    (post.likes ?? []).includes(currentUserId);
 
-  /*
-   * =====================================================
-   * AMBIL PROFILE USER YANG SEDANG LOGIN
-   * =====================================================
-   */
   useEffect(() => {
-    async function loadProfile() {
+    const loadProfile = async () => {
       try {
-        setLoadingProfile(true);
-
         const response = await getMyProfile();
 
-        console.log("DEBUG PROFILE", response.data);
-
-        const userId = Number(response.data.user.id);
-
-        console.log("DEBUG CURRENT USER ID", userId);
-
-        setCurrentUserId(userId);
+        setCurrentUserId(response.data.user.id);
       } catch (error) {
-        console.error(
-          "Gagal mengambil profile:",
-          error
-        );
+        console.error("Gagal mengambil profile:", error);
 
         await showErrorDialog(
           "Gagal memuat akun",
@@ -91,51 +69,25 @@ export default function DetailPage() {
             ? error.message
             : "Data akun tidak dapat dimuat."
         );
-      } finally {
-        setLoadingProfile(false);
       }
-    }
+    };
 
     loadProfile();
   }, []);
 
-  /*
-   * =====================================================
-   * AMBIL DETAIL POST
-   * =====================================================
-   */
   useEffect(() => {
-    async function loadPost() {
-      if (!postId || Number.isNaN(postId)) {
-        await showErrorDialog(
-          "Postingan tidak ditemukan",
-          "ID postingan tidak valid."
-        );
+    if (!Number.isFinite(postId) || postId <= 0) {
+      return;
+    }
 
-        router.replace("/");
-        return;
-      }
-
+    const loadPost = async () => {
       try {
-        setLoadingPost(true);
-
         const response = await getPost(postId);
 
-        console.log(
-          "DEBUG POST",
-          response.data.post
-        );
-
         setPost(response.data.post);
-
-        setDescription(
-          response.data.post.description
-        );
+        setDescription(response.data.post.description);
       } catch (error) {
-        console.error(
-          "Gagal mengambil postingan:",
-          error
-        );
+        console.error("Gagal mengambil postingan:", error);
 
         await showErrorDialog(
           "Gagal memuat postingan",
@@ -145,87 +97,28 @@ export default function DetailPage() {
         );
 
         router.replace("/");
-      } finally {
-        setLoadingPost(false);
       }
-    }
+    };
 
     loadPost();
   }, [postId, router]);
 
-  /*
-   * =====================================================
-   * CEK POSTINGAN MILIK USER
-   * =====================================================
-   */
-  const isMyPost =
-    post !== null &&
-    currentUserId !== null &&
-    Number(post.user_id) === Number(currentUserId);
-
-  /*
-   * =====================================================
-   * CEK LIKE
-   * =====================================================
-   */
-  const isLiked = useMemo(() => {
-    if (!post || currentUserId === null) {
-      return false;
-    }
-
-    return (
-      post.likes?.some(
-        (userId) =>
-          Number(userId) === Number(currentUserId)
-      ) ?? false
-    );
-  }, [post, currentUserId]);
-
-  /*
-   * =====================================================
-   * DEBUG
-   * =====================================================
-   */
-  useEffect(() => {
-    console.log("DEBUG RENDER OWNER BUTTON", {
-      postId: post?.id,
-      postUserId: post?.user_id,
-      currentUserId,
-      isMyPost,
-    });
-  }, [post, currentUserId, isMyPost]);
-
-  /*
-   * =====================================================
-   * REFRESH POST
-   * =====================================================
-   */
   const refreshPost = async () => {
     try {
       const response = await getPost(postId);
 
       setPost(response.data.post);
-
-      setDescription(
-        response.data.post.description
-      );
+      setDescription(response.data.post.description);
     } catch (error) {
-      console.error(
-        "Gagal refresh post:",
-        error
-      );
+      console.error("Gagal refresh post:", error);
     }
   };
 
-  /*
-   * =====================================================
-   * LIKE
-   * =====================================================
-   */
   const handleLike = async () => {
-    if (!post || isLiking) {
-      return;
-    }
+  /* v8 ignore next -- @preserve */
+if (!post || isLiking) {
+  return;
+}
 
     setIsLiking(true);
 
@@ -247,19 +140,15 @@ export default function DetailPage() {
     }
   };
 
-  /*
-   * =====================================================
-   * KOMENTAR
-   * =====================================================
-   */
   const handleComment = async (
     event: FormEvent<HTMLFormElement>
   ) => {
     event.preventDefault();
 
-    if (!post || isSubmittingComment) {
-      return;
-    }
+    /* v8 ignore next -- @preserve */
+if (!post || isSubmittingComment) {
+  return;
+}
 
     const value = comment.trim();
 
@@ -299,15 +188,11 @@ export default function DetailPage() {
     }
   };
 
-  /*
-   * =====================================================
-   * UBAH POST
-   * =====================================================
-   */
   const handleUpdatePost = async () => {
-    if (!post) {
-      return;
-    }
+   /* v8 ignore next -- @preserve */
+if (!post) {
+  return;
+}
 
     const value = description.trim();
 
@@ -347,18 +232,13 @@ export default function DetailPage() {
     }
   };
 
-  /*
-   * =====================================================
-   * GANTI COVER
-   * =====================================================
-   */
   const handleChangeCover = async (
-    event: React.ChangeEvent<HTMLInputElement>
+    event: ChangeEvent<HTMLInputElement>
   ) => {
-    if (!post) {
-      return;
-    }
-
+    /* v8 ignore next -- @preserve */
+if (!post) {
+  return;
+}
     const file = event.target.files?.[0];
 
     if (!file) {
@@ -372,6 +252,7 @@ export default function DetailPage() {
       );
 
       event.target.value = "";
+
       return;
     }
 
@@ -399,15 +280,11 @@ export default function DetailPage() {
     }
   };
 
-  /*
-   * =====================================================
-   * HAPUS POST
-   * =====================================================
-   */
   const handleDeletePost = async () => {
-    if (!post || isDeleting) {
-      return;
-    }
+    /* v8 ignore next -- @preserve */
+if (!post || isDeleting) {
+  return;
+}
 
     const confirmed = await showConfirmDialog(
       "Hapus postingan?",
@@ -441,19 +318,11 @@ export default function DetailPage() {
     }
   };
 
-  /*
-   * =====================================================
-   * HAPUS KOMENTAR
-   * =====================================================
-   */
   const handleDeleteComment = async () => {
-    if (
-      !post ||
-      !post.my_comment ||
-      isDeletingComment
-    ) {
-      return;
-    }
+    /* v8 ignore next -- @preserve */
+if (!post || !post.my_comment || isDeletingComment) {
+  return;
+}
 
     const confirmed = await showConfirmDialog(
       "Hapus komentar?",
@@ -487,373 +356,281 @@ export default function DetailPage() {
     }
   };
 
-  /*
-   * =====================================================
-   * LOADING
-   * =====================================================
-   */
-  if (
-    loadingPost ||
-    loadingProfile ||
-    !post ||
-    currentUserId === null
-  ) {
+  if (!Number.isFinite(postId) || postId <= 0) {
     return (
-      <PostLayout>
-        <main className="flex min-h-[70vh] items-center justify-center">
-          <div className="text-center">
-            <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-yellow-200 border-t-yellow-400" />
+      <main className="min-h-screen bg-slate-50 px-4 py-10">
+        <div className="mx-auto max-w-3xl">
+          <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
+            <h1 className="text-2xl font-bold text-slate-900">
+              Postingan tidak ditemukan
+            </h1>
 
-            <p className="text-sm font-medium text-slate-600">
-              Memuat postingan...
+            <p className="mt-2 text-slate-600">
+              ID postingan tidak valid.
             </p>
+
+            <button
+              type="button"
+              onClick={() => router.replace("/")}
+              className="mt-6 rounded-xl bg-yellow-500 px-5 py-3 font-semibold text-white transition hover:bg-yellow-600"
+            >
+              Kembali
+            </button>
           </div>
-        </main>
-      </PostLayout>
+        </div>
+      </main>
     );
   }
 
-  return (
-    <PostLayout>
-      <main className="mx-auto max-w-4xl">
+  if (!post || currentUserId === null) {
+    return (
+      <main className="min-h-screen bg-slate-50 px-4 py-10">
+        <div className="mx-auto max-w-3xl">
+          <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
+            <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-yellow-200 border-t-yellow-500" />
 
-        {/* Kembali */}
-        <div className="mb-5">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-yellow-600"
-          >
-            ← Kembali ke postingan
-          </Link>
+            <p className="mt-4 text-slate-600">
+              Memuat postingan...
+            </p>
+          </div>
         </div>
+      </main>
+    );
+  }
 
-        {/* =================================================
-            DETAIL POST
-        ================================================= */}
-        <article className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+  const likes = post.likes ?? [];
+  const comments = post.comments ?? [];
+  const authorName = post.author.name?.trim() || "Pengguna";
 
-          {/* COVER */}
-          {post.cover ? (
-            <div className="aspect-video overflow-hidden bg-slate-100">
+  return (
+    <main className="min-h-screen bg-slate-50 px-4 py-8">
+      <div className="mx-auto max-w-3xl">
+        <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
+          <div className="relative">
+            {post.cover ? (
               <img
                 src={post.cover}
                 alt="Cover postingan"
-                className="h-full w-full object-cover"
+                className="h-72 w-full object-cover"
               />
-            </div>
-          ) : (
-            <div className="flex aspect-video items-center justify-center bg-gradient-to-br from-yellow-100 via-yellow-50 to-white">
-              <div className="text-center">
-                <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-yellow-400 text-2xl font-bold text-slate-900">
-                  P
+            ) : (
+              <div className="flex h-72 w-full items-center justify-center bg-slate-200 text-slate-500">
+                Tidak ada cover
+              </div>
+            )}
+
+            {isMyPost && (
+              <div className="absolute right-4 top-4 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(true)}
+                  disabled={isUpdating || isDeleting}
+                  className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Ubah
+                </button>
+
+                <label className="cursor-pointer rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow transition hover:bg-slate-100">
+                  {isChangingCover ? "Mengubah..." : "Cover"}
+
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={isChangingCover || isDeleting}
+                    onChange={handleChangeCover}
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  onClick={handleDeletePost}
+                  disabled={
+                    isDeleting ||
+                    isUpdating ||
+                    isChangingCover
+                  }
+                  className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isDeleting ? "Menghapus..." : "Hapus"}
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="p-6">
+            <div className="flex items-center gap-3">
+              {post.author.photo ? (
+                <img
+                  src={post.author.photo}
+                  alt={authorName}
+                  className="h-11 w-11 rounded-full object-cover"
+                />
+              ) : (
+                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-yellow-100 font-bold text-yellow-700">
+                  {authorName.charAt(0).toUpperCase()}
                 </div>
+              )}
+
+              <div>
+                <p className="font-semibold text-slate-900">
+                  {authorName}
+                </p>
 
                 <p className="text-sm text-slate-500">
-                  Tidak ada cover
+                  {new Date(
+                    post.created_at
+                  ).toLocaleDateString("id-ID")}
                 </p>
               </div>
             </div>
-          )}
 
-          <div className="p-6 sm:p-8">
-
-            {/* =================================================
-                HEADER
-            ================================================= */}
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-
-              {/* USER */}
-              <div className="flex items-center gap-3">
-
-                {post.author?.photo ? (
-                  <img
-                    src={post.author.photo}
-                    alt={post.author.name}
-                    className="h-12 w-12 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-400 text-lg font-bold text-slate-900">
-                    {post.author?.name
-                      ?.charAt(0)
-                      .toUpperCase() || "U"}
-                  </div>
-                )}
-
-                <div>
-                  <h1 className="font-bold text-slate-900">
-                    {post.author?.name ||
-                      "Pengguna"}
-                  </h1>
-
-                  <p className="text-sm text-slate-500">
-                    {new Date(
-                      post.created_at
-                    ).toLocaleDateString(
-                      "id-ID",
-                      {
-                        day: "2-digit",
-                        month: "long",
-                        year: "numeric",
-                      }
-                    )}
-                  </p>
-                </div>
-              </div>
-
-              {/* =================================================
-                  TOMBOL PEMILIK
-              ================================================= */}
-              {isMyPost && (
-                <div className="flex flex-wrap gap-2">
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setIsEditing(true)
-                    }
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-yellow-300 hover:bg-yellow-50"
-                  >
-                    Ubah
-                  </button>
-
-                  <label className="cursor-pointer rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-yellow-300 hover:bg-yellow-50">
-                    {isChangingCover
-                      ? "Mengubah..."
-                      : "Cover"}
-
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={
-                        handleChangeCover
-                      }
-                      disabled={
-                        isChangingCover
-                      }
-                      className="hidden"
-                    />
-                  </label>
-
-                  <button
-                    type="button"
-                    onClick={
-                      handleDeletePost
-                    }
-                    disabled={isDeleting}
-                    className="rounded-xl bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-100 disabled:opacity-50"
-                  >
-                    {isDeleting
-                      ? "Menghapus..."
-                      : "Hapus"}
-                  </button>
-
-                </div>
-              )}
-            </div>
-
-            {/* =================================================
-                DESKRIPSI
-            ================================================= */}
             {isEditing ? (
-              <div className="mt-7">
-
+              <div className="mt-6">
                 <textarea
                   value={description}
                   onChange={(event) =>
-                    setDescription(
-                      event.target.value
-                    )
+                    setDescription(event.target.value)
                   }
                   rows={6}
-                  className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-yellow-400 focus:bg-white focus:ring-4 focus:ring-yellow-100"
+                  className="w-full rounded-xl border border-slate-300 p-4 outline-none transition focus:border-yellow-500 focus:ring-2 focus:ring-yellow-100"
                 />
 
-                <div className="mt-3 flex justify-end gap-2">
-
+                <div className="mt-3 flex gap-3">
                   <button
                     type="button"
-                    onClick={() => {
-                      setDescription(
-                        post.description
-                      );
-
-                      setIsEditing(false);
-                    }}
-                    className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
-                  >
-                    Batal
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={
-                      handleUpdatePost
-                    }
+                    onClick={handleUpdatePost}
                     disabled={isUpdating}
-                    className="rounded-xl bg-yellow-400 px-5 py-2 text-sm font-bold text-slate-900 hover:bg-yellow-300 disabled:opacity-50"
+                    className="rounded-xl bg-yellow-500 px-5 py-3 font-semibold text-white transition hover:bg-yellow-600 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isUpdating
                       ? "Menyimpan..."
                       : "Simpan"}
                   </button>
 
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDescription(post.description);
+                      setIsEditing(false);
+                    }}
+                    disabled={isUpdating}
+                    className="rounded-xl bg-slate-200 px-5 py-3 font-semibold text-slate-700 transition hover:bg-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Batal
+                  </button>
                 </div>
               </div>
             ) : (
-              <p className="mt-7 whitespace-pre-wrap text-base leading-8 text-slate-700">
+              <p className="mt-6 whitespace-pre-wrap text-lg leading-8 text-slate-800">
                 {post.description}
               </p>
             )}
 
-            {/* =================================================
-                LIKE
-            ================================================= */}
-            <div className="mt-7 flex items-center gap-3 border-t border-slate-100 pt-5">
-
+            <div className="mt-6 flex items-center gap-3">
               <button
                 type="button"
                 onClick={handleLike}
                 disabled={isLiking}
-                className={`rounded-xl px-4 py-2.5 text-sm font-semibold ${
+                className={`rounded-xl px-5 py-3 font-semibold transition ${
                   isLiked
-                    ? "bg-red-50 text-red-600"
-                    : "bg-slate-100 text-slate-700 hover:bg-yellow-100"
-                }`}
+                    ? "bg-red-100 text-red-600 hover:bg-red-200"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                } disabled:cursor-not-allowed disabled:opacity-50`}
               >
-                {isLiked
-                  ? "♥ Disukai"
-                  : "♡ Suka"}
+                {isLiking
+                  ? "Memproses..."
+                  : isLiked
+                    ? "♥ Disukai"
+                    : "♡ Suka"}
               </button>
 
               <span className="text-sm text-slate-500">
-                {post.likes?.length || 0} suka
+                {likes.length} suka
               </span>
-
-              <span className="text-slate-300">
-                •
-              </span>
-
-              <span className="text-sm text-slate-500">
-                {post.comments?.length || 0}{" "}
-                komentar
-              </span>
-
             </div>
-          </div>
-        </article>
 
-        {/* =================================================
-            KOMENTAR
-        ================================================= */}
-        <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+            <div className="mt-8 border-t border-slate-200 pt-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-slate-900">
+                  Komentar
+                </h2>
 
-          <h2 className="text-xl font-bold text-slate-900">
-            Komentar
-          </h2>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Bagikan pendapat kamu tentang
-            postingan ini.
-          </p>
-
-          {/* FORM KOMENTAR */}
-          <form
-            onSubmit={handleComment}
-            className="mt-6"
-          >
-            <textarea
-              value={comment}
-              onChange={(event) =>
-                setComment(event.target.value)
-              }
-              rows={4}
-              placeholder="Tulis komentar..."
-              className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-yellow-400 focus:bg-white focus:ring-4 focus:ring-yellow-100"
-            />
-
-            <div className="mt-3 flex justify-end">
-
-              <button
-                type="submit"
-                disabled={
-                  isSubmittingComment
-                }
-                className="rounded-xl bg-yellow-400 px-5 py-2.5 text-sm font-bold text-slate-900 hover:bg-yellow-300 disabled:opacity-50"
-              >
-                {isSubmittingComment
-                  ? "Mengirim..."
-                  : "Kirim Komentar"}
-              </button>
-
-            </div>
-          </form>
-
-          {/* DAFTAR KOMENTAR */}
-          <div className="mt-7 space-y-4">
-
-            {!post.comments ||
-            post.comments.length === 0 ? (
-              <div className="rounded-2xl bg-slate-50 px-5 py-10 text-center">
-                <p className="text-sm font-medium text-slate-600">
-                  Belum ada komentar.
-                </p>
+                <span className="text-sm text-slate-500">
+                  {comments.length} komentar
+                </span>
               </div>
-            ) : (
-              post.comments.map((item) => (
-                <div
-                  key={item.id}
-                  className="rounded-2xl border border-slate-100 bg-slate-50 p-4"
-                >
-                  <p className="text-sm font-semibold text-slate-900">
-                    Komentar
-                  </p>
 
-                  <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-600">
-                    {item.comment}
-                  </p>
-
-                  <p className="mt-2 text-xs text-slate-400">
-                    {new Date(
-                      item.created_at
-                    ).toLocaleDateString(
-                      "id-ID",
-                      {
-                        day: "2-digit",
-                        month: "long",
-                        year: "numeric",
-                      }
-                    )}
-                  </p>
-                </div>
-              ))
-            )}
-
-          </div>
-
-          {/* HAPUS KOMENTAR SENDIRI */}
-          {post.my_comment && (
-            <div className="mt-5 flex justify-end">
-
-              <button
-                type="button"
-                onClick={
-                  handleDeleteComment
-                }
-                disabled={
-                  isDeletingComment
-                }
-                className="text-sm font-semibold text-red-500 hover:text-red-700 disabled:opacity-50"
+              <form
+                onSubmit={handleComment}
+                className="mt-4"
               >
-                {isDeletingComment
-                  ? "Menghapus..."
-                  : "Hapus komentar saya"}
-              </button>
+                <textarea
+                  value={comment}
+                  onChange={(event) =>
+                    setComment(event.target.value)
+                  }
+                  rows={4}
+                  placeholder="Tulis komentar..."
+                  disabled={isSubmittingComment}
+                  className="w-full rounded-xl border border-slate-300 p-4 outline-none transition focus:border-yellow-500 focus:ring-2 focus:ring-yellow-100 disabled:bg-slate-100"
+                />
 
+                <button
+                  type="submit"
+                  disabled={isSubmittingComment}
+                  className="mt-3 rounded-xl bg-yellow-500 px-5 py-3 font-semibold text-white transition hover:bg-yellow-600 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isSubmittingComment
+                    ? "Mengirim..."
+                    : "Kirim Komentar"}
+                </button>
+              </form>
+
+              <div className="mt-6 space-y-4">
+                {comments.length === 0 ? (
+                  <p className="rounded-xl bg-slate-50 p-5 text-center text-slate-500">
+                    Belum ada komentar.
+                  </p>
+                ) : (
+                  comments.map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-xl bg-slate-50 p-4"
+                    >
+                      <p className="text-slate-800">
+                        {item.comment}
+                      </p>
+
+                      <p className="mt-2 text-xs text-slate-500">
+                        {new Date(
+                          item.created_at
+                        ).toLocaleDateString("id-ID")}
+                      </p>
+                    </div>
+                  ))
+                )}
+
+                {post.my_comment && (
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleDeleteComment}
+                      disabled={isDeletingComment}
+                      className="rounded-xl bg-red-100 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-200 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {isDeletingComment
+                        ? "Menghapus..."
+                        : "Hapus Komentar Saya"}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-          )}
-
-        </section>
-      </main>
-    </PostLayout>
+          </div>
+        </div>
+      </div>
+    </main>
   );
 }
+

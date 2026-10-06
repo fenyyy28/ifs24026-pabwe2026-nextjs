@@ -1,193 +1,325 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import reducer, {
+import {
   authLogin,
-  authLogout,
   authRegister,
+  authLogout,
 } from "@/features/auth/states/reducer";
 
+import {
+  login,
+  register,
+} from "@/features/auth/api/authApi";
+
+import {
+  putAccessToken,
+  removeAccessToken,
+} from "@/helpers/apiHelper";
+
+vi.mock("@/features/auth/api/authApi", () => ({
+  login: vi.fn(),
+  register: vi.fn(),
+}));
+
+vi.mock("@/helpers/apiHelper", () => ({
+  putAccessToken: vi.fn(),
+  removeAccessToken: vi.fn(),
+}));
+
 describe("auth reducer", () => {
-  const initialState = {
-    user: null,
-    token: null,
-
-    isAuthLogin: false,
-    isAuthRegister: false,
-    isAuthLogout: false,
-
-    error: null,
-  };
-
-  const user = {
-    id: 1,
-    name: "Feny Pasaribu",
-    email: "feny@example.com",
-    email_verified_at: null,
-    created_at: "2026-01-01",
-    updated_at: "2026-01-01",
-  };
-
-  describe("initial state", () => {
-    it("menggunakan state awal", () => {
-      expect(reducer(undefined, { type: "unknown" })).toEqual(
-        initialState
-      );
-    });
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
   describe("authLogin", () => {
-    it("mengatur loading ketika login pending", () => {
-      const state = reducer(
-        initialState,
-        authLogin.pending("request-1", {
+    it("berhasil login", async () => {
+      const response = {
+        status: "success",
+        message: "Login berhasil",
+        data: {
+          user: {
+            id: 1,
+            name: "Feny Pasaribu",
+            email: "feny@example.com",
+            email_verified_at: null,
+            created_at: "2026-01-01",
+            updated_at: "2026-01-01",
+          },
+          token: "token-123",
+        },
+      };
+
+      vi.mocked(login).mockResolvedValue(response);
+
+      const dispatch = vi.fn();
+
+      const result = await authLogin(
+        {
           email: "feny@example.com",
           password: "password123",
-        })
+        }
+      )(dispatch, vi.fn(), undefined);
+
+      expect(login).toHaveBeenCalledWith({
+        email: "feny@example.com",
+        password: "password123",
+      });
+
+      expect(putAccessToken).toHaveBeenCalledWith(
+        "token-123"
       );
+
+      expect(result.payload).toEqual(response);
+    });
+
+    it("gagal login dengan Error", async () => {
+      vi.mocked(login).mockRejectedValue(
+        new Error("Email atau password salah")
+      );
+
+      const dispatch = vi.fn();
+
+      const result = await authLogin(
+        {
+          email: "feny@example.com",
+          password: "password123",
+        }
+      )(dispatch, vi.fn(), undefined);
+
+      expect(result.payload).toBe(
+        "Email atau password salah"
+      );
+    });
+
+    it("gagal login dengan error bukan Error", async () => {
+      vi.mocked(login).mockRejectedValue("unknown error");
+
+      const dispatch = vi.fn();
+
+      const result = await authLogin(
+        {
+          email: "feny@example.com",
+          password: "password123",
+        }
+      )(dispatch, vi.fn(), undefined);
+
+      expect(result.payload).toBe("Login gagal");
+    });
+  });
+
+  describe("authRegister", () => {
+    it("berhasil register", async () => {
+      const response = {
+        status: "success",
+        message: "Registrasi berhasil",
+      };
+
+      vi.mocked(register).mockResolvedValue(response);
+
+      const dispatch = vi.fn();
+
+      const result = await authRegister(
+        {
+          name: "Feny Pasaribu",
+          email: "feny@example.com",
+          password: "password123",
+        }
+      )(dispatch, vi.fn(), undefined);
+
+      expect(register).toHaveBeenCalledWith({
+        name: "Feny Pasaribu",
+        email: "feny@example.com",
+        password: "password123",
+      });
+
+      expect(result.payload).toEqual(response);
+    });
+
+    it("gagal register dengan Error", async () => {
+      vi.mocked(register).mockRejectedValue(
+        new Error("Email sudah digunakan")
+      );
+
+      const dispatch = vi.fn();
+
+      const result = await authRegister(
+        {
+          name: "Feny Pasaribu",
+          email: "feny@example.com",
+          password: "password123",
+        }
+      )(dispatch, vi.fn(), undefined);
+
+      expect(result.payload).toBe(
+        "Email sudah digunakan"
+      );
+    });
+
+    it("gagal register dengan error bukan Error", async () => {
+      vi.mocked(register).mockRejectedValue("unknown error");
+
+      const dispatch = vi.fn();
+
+      const result = await authRegister(
+        {
+          name: "Feny Pasaribu",
+          email: "feny@example.com",
+          password: "password123",
+        }
+      )(dispatch, vi.fn(), undefined);
+
+      expect(result.payload).toBe("Registrasi gagal");
+    });
+  });
+
+  describe("authLogout", () => {
+    it("berhasil logout", async () => {
+      const dispatch = vi.fn();
+
+      const result = await authLogout()(
+        dispatch,
+        vi.fn(),
+        undefined
+      );
+
+      expect(removeAccessToken).toHaveBeenCalledTimes(1);
+      expect(result.payload).toBe(true);
+    });
+  });
+
+  describe("extraReducers", () => {
+    const getReducer = async () => {
+      const module = await import(
+        "@/features/auth/states/reducer"
+      );
+
+      return module.default;
+    };
+
+    it("menangani login pending", async () => {
+      const reducer = await getReducer();
+
+      const state = reducer(undefined, {
+        type: authLogin.pending.type,
+      });
 
       expect(state.isAuthLogin).toBe(true);
       expect(state.error).toBeNull();
     });
 
-    it("menyimpan user dan token ketika login berhasil", () => {
-      const state = reducer(
-        {
-          ...initialState,
-          isAuthLogin: true,
-        },
-        authLogin.fulfilled(
-          {
-            status: "success",
-            message: "Login berhasil",
-            data: {
-              user,
-              token: "token-123",
-            },
-          },
-          "request-1",
-          {
+    it("menangani login fulfilled", async () => {
+      const reducer = await getReducer();
+
+      const payload = {
+        status: "success",
+        message: "Login berhasil",
+        data: {
+          user: {
+            id: 1,
+            name: "Feny Pasaribu",
             email: "feny@example.com",
-            password: "password123",
-          }
-        )
-      );
+            email_verified_at: null,
+            created_at: "2026-01-01",
+            updated_at: "2026-01-01",
+          },
+          token: "token-123",
+        },
+      };
+
+      const state = reducer(undefined, {
+        type: authLogin.fulfilled.type,
+        payload,
+      });
 
       expect(state.isAuthLogin).toBe(false);
-      expect(state.user).toEqual(user);
+      expect(state.user).toEqual(payload.data.user);
       expect(state.token).toBe("token-123");
       expect(state.error).toBeNull();
     });
 
-    it("menyimpan error ketika login gagal", () => {
-      const state = reducer(
-        {
-          ...initialState,
-          isAuthLogin: true,
-        },
-        authLogin.rejected(
-          new Error("Login gagal"),
-          "request-1",
-          {
-            email: "feny@example.com",
-            password: "password123",
-          },
-          "Email atau password salah"
-        )
-      );
+    it("menangani login rejected", async () => {
+      const reducer = await getReducer();
+
+      const state = reducer(undefined, {
+        type: authLogin.rejected.type,
+        payload: "Login gagal",
+      });
 
       expect(state.isAuthLogin).toBe(false);
-      expect(state.error).toBe(
-        "Email atau password salah"
-      );
+      expect(state.error).toBe("Login gagal");
     });
-  });
 
-  describe("authRegister", () => {
-    it("mengatur loading ketika register pending", () => {
-      const state = reducer(
-        initialState,
-        authRegister.pending("request-2", {
-          name: "Feny Pasaribu",
-          email: "feny@example.com",
-          password: "password123",
-        })
-      );
+    it("menangani register pending", async () => {
+      const reducer = await getReducer();
+
+      const state = reducer(undefined, {
+        type: authRegister.pending.type,
+      });
 
       expect(state.isAuthRegister).toBe(true);
       expect(state.error).toBeNull();
     });
 
-    it("menyelesaikan loading ketika register berhasil", () => {
-      const state = reducer(
-        {
-          ...initialState,
-          isAuthRegister: true,
+    it("menangani register fulfilled", async () => {
+      const reducer = await getReducer();
+
+      const state = reducer(undefined, {
+        type: authRegister.fulfilled.type,
+        payload: {
+          status: "success",
+          message: "Registrasi berhasil",
         },
-        authRegister.fulfilled(
-          {
-            status: "success",
-            message: "Registrasi berhasil",
-          },
-          "request-2",
-          {
-            name: "Feny Pasaribu",
-            email: "feny@example.com",
-            password: "password123",
-          }
-        )
-      );
+      });
 
       expect(state.isAuthRegister).toBe(false);
       expect(state.error).toBeNull();
     });
 
-    it("menyimpan error ketika register gagal", () => {
-      const state = reducer(
-        {
-          ...initialState,
-          isAuthRegister: true,
-        },
-        authRegister.rejected(
-          new Error("Registrasi gagal"),
-          "request-2",
-          {
-            name: "Feny Pasaribu",
-            email: "feny@example.com",
-            password: "password123",
-          },
-          "Email sudah digunakan"
-        )
-      );
+    it("menangani register rejected", async () => {
+      const reducer = await getReducer();
+
+      const state = reducer(undefined, {
+        type: authRegister.rejected.type,
+        payload: "Registrasi gagal",
+      });
 
       expect(state.isAuthRegister).toBe(false);
-      expect(state.error).toBe(
-        "Email sudah digunakan"
-      );
+      expect(state.error).toBe("Registrasi gagal");
     });
-  });
 
-  describe("authLogout", () => {
-    it("mengatur loading ketika logout pending", () => {
-      const state = reducer(
-        initialState,
-        authLogout.pending("request-3")
-      );
+    it("menangani logout pending", async () => {
+      const reducer = await getReducer();
+
+      const state = reducer(undefined, {
+        type: authLogout.pending.type,
+      });
 
       expect(state.isAuthLogout).toBe(true);
     });
 
-    it("menghapus user dan token ketika logout berhasil", () => {
+    it("menangani logout fulfilled", async () => {
+      const reducer = await getReducer();
+
       const state = reducer(
         {
-          ...initialState,
-          user,
+          user: {
+            id: 1,
+            name: "Feny Pasaribu",
+            email: "feny@example.com",
+            email_verified_at: null,
+            created_at: "2026-01-01",
+            updated_at: "2026-01-01",
+          },
           token: "token-123",
-          error: "error sebelumnya",
+          isAuthLogin: false,
+          isAuthRegister: false,
+          isAuthLogout: true,
+          error: "error",
         },
-        authLogout.fulfilled(
-          true,
-          "request-3"
-        )
+        {
+          type: authLogout.fulfilled.type,
+          payload: true,
+        }
       );
 
       expect(state.isAuthLogout).toBe(false);
@@ -196,17 +328,12 @@ describe("auth reducer", () => {
       expect(state.error).toBeNull();
     });
 
-    it("menghentikan loading ketika logout gagal", () => {
-      const state = reducer(
-        {
-          ...initialState,
-          isAuthLogout: true,
-        },
-        authLogout.rejected(
-          new Error("Logout gagal"),
-          "request-3"
-        )
-      );
+    it("menangani logout rejected", async () => {
+      const reducer = await getReducer();
+
+      const state = reducer(undefined, {
+        type: authLogout.rejected.type,
+      });
 
       expect(state.isAuthLogout).toBe(false);
     });

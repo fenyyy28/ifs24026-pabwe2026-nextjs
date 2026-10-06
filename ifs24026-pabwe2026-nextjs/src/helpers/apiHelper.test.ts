@@ -1,4 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import {
   apiFetch,
@@ -11,18 +18,20 @@ describe("apiHelper", () => {
   beforeEach(() => {
     localStorage.clear();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("menyimpan access token", () => {
     putAccessToken("token-123");
 
-    expect(localStorage.getItem("access_token")).toBe(
-      "token-123"
-    );
+    expect(
+      localStorage.getItem("access_token")
+    ).toBe("token-123");
   });
 
   it("mengambil access token", () => {
@@ -31,7 +40,9 @@ describe("apiHelper", () => {
       "token-456"
     );
 
-    expect(getAccessToken()).toBe("token-456");
+    expect(getAccessToken()).toBe(
+      "token-456"
+    );
   });
 
   it("mengembalikan null jika access token belum ada", () => {
@@ -51,6 +62,71 @@ describe("apiHelper", () => {
     ).toBeNull();
   });
 
+  it("mengembalikan null ketika window tidak tersedia", () => {
+    vi.stubGlobal("window", undefined);
+
+    expect(getAccessToken()).toBeNull();
+  });
+
+  it("tidak melakukan apa-apa ketika window tidak tersedia saat menyimpan token", () => {
+    vi.stubGlobal("window", undefined);
+
+    expect(() => {
+      putAccessToken("token-node");
+    }).not.toThrow();
+  });
+
+  it("tidak melakukan apa-apa ketika window tidak tersedia saat menghapus token", () => {
+    vi.stubGlobal("window", undefined);
+
+    expect(() => {
+      removeAccessToken();
+    }).not.toThrow();
+  });
+
+  it("melakukan GET request tanpa options", async () => {
+    const mockResponse = {
+      status: "success",
+      message: "Berhasil",
+      data: {},
+    };
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue(
+        mockResponse
+      ),
+    });
+
+    vi.stubGlobal("fetch", mockFetch);
+
+    const result = await apiFetch(
+      "/api/test"
+    );
+
+    expect(result).toEqual(
+      mockResponse
+    );
+
+    expect(
+      mockFetch
+    ).toHaveBeenCalledTimes(1);
+
+    const [url, options] =
+      mockFetch.mock.calls[0];
+
+    expect(url).toContain(
+      "/api/test"
+    );
+
+    expect(
+      options?.headers
+    ).toMatchObject({
+      "Content-Type":
+        "application/json",
+    });
+  });
+
   it("melakukan GET request dengan query parameter dan token", async () => {
     localStorage.setItem(
       "access_token",
@@ -65,36 +141,58 @@ describe("apiHelper", () => {
       },
     };
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: vi.fn().mockResolvedValue(mockResponse),
-      })
-    );
-
-    const result = await apiFetch("/api/test", {
-      method: "GET",
-      query: {
-        page: 1,
-        active: true,
-      },
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue(
+        mockResponse
+      ),
     });
 
-    expect(result).toEqual(mockResponse);
+    vi.stubGlobal("fetch", mockFetch);
 
-    expect(fetch).toHaveBeenCalledTimes(1);
+    const result = await apiFetch(
+      "/api/test",
+      {
+        method: "GET",
+        query: {
+          page: 1,
+          active: true,
+          empty: null,
+          missing: undefined,
+        },
+      }
+    );
 
-    const [url, options] = vi.mocked(fetch).mock
-      .calls[0];
+    expect(result).toEqual(
+      mockResponse
+    );
+
+    expect(
+      mockFetch
+    ).toHaveBeenCalledTimes(1);
+
+    const [url, options] =
+      mockFetch.mock.calls[0];
 
     expect(url).toContain(
       "/api/test?page=1&active=true"
     );
 
-    expect(options?.headers).toMatchObject({
-      "Content-Type": "application/json",
-      Authorization: "Bearer token-get",
+    expect(url).not.toContain(
+      "empty"
+    );
+
+    expect(url).not.toContain(
+      "missing"
+    );
+
+    expect(
+      options?.headers
+    ).toMatchObject({
+      "Content-Type":
+        "application/json",
+      Authorization:
+        "Bearer token-get",
     });
   });
 
@@ -107,35 +205,47 @@ describe("apiHelper", () => {
       },
     };
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: vi.fn().mockResolvedValue(mockResponse),
-      })
-    );
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue(
+        mockResponse
+      ),
+    });
+
+    vi.stubGlobal("fetch", mockFetch);
 
     const body = {
       name: "Feny",
     };
 
-    const result = await apiFetch("/api/users", {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
+    const result = await apiFetch(
+      "/api/users",
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      }
+    );
 
-    expect(result).toEqual(mockResponse);
+    expect(result).toEqual(
+      mockResponse
+    );
 
-    const [, options] = vi.mocked(fetch).mock
-      .calls[0];
+    const [, options] =
+      mockFetch.mock.calls[0];
 
-    expect(options?.method).toBe("POST");
+    expect(options?.method).toBe(
+      "POST"
+    );
+
     expect(options?.body).toBe(
       JSON.stringify(body)
     );
 
-    expect(options?.headers).toMatchObject({
-      "Content-Type": "application/json",
+    expect(
+      options?.headers
+    ).toMatchObject({
+      "Content-Type":
+        "application/json",
     });
   });
 
@@ -146,21 +256,26 @@ describe("apiHelper", () => {
       data: {},
     };
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: vi.fn().mockResolvedValue(mockResponse),
-      })
-    );
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue(
+        mockResponse
+      ),
+    });
+
+    vi.stubGlobal("fetch", mockFetch);
 
     const formData = new FormData();
 
     formData.append(
       "photo",
-      new File(["photo"], "photo.jpg", {
-        type: "image/jpeg",
-      })
+      new File(
+        ["photo"],
+        "photo.jpg",
+        {
+          type: "image/jpeg",
+        }
+      )
     );
 
     const result = await apiFetch(
@@ -171,46 +286,134 @@ describe("apiHelper", () => {
       }
     );
 
-    expect(result).toEqual(mockResponse);
+    expect(result).toEqual(
+      mockResponse
+    );
 
-    const [, options] = vi.mocked(fetch).mock
-      .calls[0];
+    const [, options] =
+      mockFetch.mock.calls[0];
 
-    expect(options?.body).toBe(formData);
+    expect(options?.body).toBe(
+      formData
+    );
 
     expect(
-      (options?.headers as Record<string, string>)[
-        "Content-Type"
-      ]
+      (
+        options?.headers as Record<
+          string,
+          string
+        >
+      )["Content-Type"]
     ).toBeUndefined();
   });
 
-  it("melempar error ketika response tidak berhasil", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: false,
-        status: 422,
-        json: vi.fn().mockResolvedValue({
-          message: "Data tidak valid",
-        }),
-      })
+  it("menggunakan custom headers", async () => {
+    const mockResponse = {
+      status: "success",
+      message: "Berhasil",
+      data: {},
+    };
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue(
+        mockResponse
+      ),
+    });
+
+    vi.stubGlobal("fetch", mockFetch);
+
+    await apiFetch(
+      "/api/custom",
+      {
+        method: "GET",
+        headers: {
+          "X-Test": "testing",
+          Authorization:
+            "Custom Authorization",
+        },
+      }
     );
+
+    const [, options] =
+      mockFetch.mock.calls[0];
+
+    expect(
+      options?.headers
+    ).toMatchObject({
+      "Content-Type":
+        "application/json",
+      "X-Test": "testing",
+      Authorization:
+        "Custom Authorization",
+    });
+  });
+
+  it("tidak menambahkan Authorization jika token tidak tersedia", async () => {
+    const mockResponse = {
+      status: "success",
+      message: "Berhasil",
+      data: {},
+    };
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue(
+        mockResponse
+      ),
+    });
+
+    vi.stubGlobal("fetch", mockFetch);
+
+    localStorage.removeItem(
+      "access_token"
+    );
+
+    await apiFetch(
+      "/api/no-token"
+    );
+
+    const [, options] =
+      mockFetch.mock.calls[0];
+
+    expect(
+      (
+        options?.headers as Record<
+          string,
+          string
+        >
+      ).Authorization
+    ).toBeUndefined();
+  });
+
+  it("melempar error ketika response tidak berhasil dengan message", async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 422,
+      json: vi.fn().mockResolvedValue({
+        message: "Data tidak valid",
+      }),
+    });
+
+    vi.stubGlobal("fetch", mockFetch);
 
     await expect(
       apiFetch("/api/test")
-    ).rejects.toThrow("Data tidak valid");
+    ).rejects.toThrow(
+      "Data tidak valid"
+    );
   });
 
   it("menggunakan pesan default jika response error tidak memiliki message", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: false,
-        status: 500,
-        json: vi.fn().mockResolvedValue({}),
-      })
-    );
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: vi.fn().mockResolvedValue(
+        {}
+      ),
+    });
+
+    vi.stubGlobal("fetch", mockFetch);
 
     await expect(
       apiFetch("/api/test")
@@ -220,16 +423,15 @@ describe("apiHelper", () => {
   });
 
   it("tetap menggunakan pesan default jika response error bukan JSON", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: false,
-        status: 404,
-        json: vi.fn().mockRejectedValue(
-          new Error("Invalid JSON")
-        ),
-      })
-    );
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: vi.fn().mockRejectedValue(
+        new Error("Invalid JSON")
+      ),
+    });
+
+    vi.stubGlobal("fetch", mockFetch);
 
     await expect(
       apiFetch("/api/test")

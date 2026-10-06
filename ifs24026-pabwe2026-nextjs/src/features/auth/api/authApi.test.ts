@@ -1,42 +1,30 @@
-import {
-  afterEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { apiFetch } from "@/helpers/apiHelper";
-
-import {
-  login,
-  register,
-  type LoginResponse,
-  type RegisterResponse,
-} from "@/features/auth/api/authApi";
+import { login, register } from "@/features/auth/api/authApi";
 
 vi.mock("@/helpers/apiHelper", () => ({
   apiFetch: vi.fn(),
 }));
 
 describe("authApi", () => {
-  afterEach(() => {
+  beforeEach(() => {
     vi.clearAllMocks();
   });
 
   describe("login", () => {
-    it("mengirim request login dengan email dan password", async () => {
-      const response: LoginResponse = {
+    it("berhasil melakukan login", async () => {
+      const response = {
         status: "success",
         message: "Login berhasil",
         data: {
           user: {
             id: 1,
-            name: "Feny",
+            name: "Feny Pasaribu",
             email: "feny@example.com",
             email_verified_at: null,
-            created_at: "2026-01-01T00:00:00.000000Z",
-            updated_at: "2026-01-01T00:00:00.000000Z",
+            created_at: "2026-01-01",
+            updated_at: "2026-01-01",
           },
           token: "token-123",
         },
@@ -44,87 +32,98 @@ describe("authApi", () => {
 
       vi.mocked(apiFetch).mockResolvedValue(response);
 
-      const result = await login({
+      const data = {
         email: "feny@example.com",
         password: "password123",
-      });
+      };
 
-      expect(result).toEqual(response);
+      const result = await login(data);
 
       expect(apiFetch).toHaveBeenCalledTimes(1);
       expect(apiFetch).toHaveBeenCalledWith(
         "/api/v1/auth/login",
         {
           method: "POST",
-          body: JSON.stringify({
-            email: "feny@example.com",
-            password: "password123",
-          }),
+          body: JSON.stringify(data),
         }
       );
+
+      expect(result).toEqual(response);
     });
 
-    it("meneruskan error dari apiFetch", async () => {
-      vi.mocked(apiFetch).mockRejectedValue(
-        new Error("Email atau password salah")
-      );
+    it("meneruskan error ketika login gagal", async () => {
+      const error = new Error("Login gagal");
 
-      await expect(
-        login({
-          email: "salah@example.com",
-          password: "password-salah",
-        })
-      ).rejects.toThrow("Email atau password salah");
+      vi.mocked(apiFetch).mockRejectedValue(error);
+
+      const data = {
+        email: "feny@example.com",
+        password: "password123",
+      };
+
+      await expect(login(data)).rejects.toThrow("Login gagal");
 
       expect(apiFetch).toHaveBeenCalledTimes(1);
+      expect(apiFetch).toHaveBeenCalledWith(
+        "/api/v1/auth/login",
+        {
+          method: "POST",
+          body: JSON.stringify(data),
+        }
+      );
     });
   });
 
   describe("register", () => {
-    it("mengirim request register dengan data pengguna", async () => {
-      const response: RegisterResponse = {
+    it("berhasil melakukan register", async () => {
+      const response = {
         status: "success",
         message: "Registrasi berhasil",
       };
 
       vi.mocked(apiFetch).mockResolvedValue(response);
 
-      const result = await register({
+      const data = {
         name: "Feny Pasaribu",
         email: "feny@example.com",
         password: "password123",
-      });
+      };
 
-      expect(result).toEqual(response);
+      const result = await register(data);
 
       expect(apiFetch).toHaveBeenCalledTimes(1);
       expect(apiFetch).toHaveBeenCalledWith(
         "/api/v1/auth/register",
         {
           method: "POST",
-          body: JSON.stringify({
-            name: "Feny Pasaribu",
-            email: "feny@example.com",
-            password: "password123",
-          }),
+          body: JSON.stringify(data),
         }
       );
+
+      expect(result).toEqual(response);
     });
 
-    it("meneruskan error dari apiFetch", async () => {
-      vi.mocked(apiFetch).mockRejectedValue(
-        new Error("Email sudah digunakan")
-      );
+    it("meneruskan error ketika register gagal", async () => {
+      const error = new Error("Register gagal");
 
-      await expect(
-        register({
-          name: "Feny",
-          email: "feny@example.com",
-          password: "password123",
-        })
-      ).rejects.toThrow("Email sudah digunakan");
+      vi.mocked(apiFetch).mockRejectedValue(error);
+
+      const data = {
+        name: "Feny Pasaribu",
+        email: "feny@example.com",
+        password: "password123",
+      };
+
+      await expect(register(data)).rejects.toThrow("Register gagal");
 
       expect(apiFetch).toHaveBeenCalledTimes(1);
+      expect(apiFetch).toHaveBeenCalledWith(
+        "/api/v1/auth/register",
+        {
+          method: "POST",
+          body: JSON.stringify(data),
+        }
+      );
     });
   });
 });

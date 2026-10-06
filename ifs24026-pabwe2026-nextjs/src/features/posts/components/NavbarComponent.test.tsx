@@ -8,6 +8,8 @@ const mockReplace = vi.fn();
 const mockDispatch = vi.fn();
 const mockShowConfirmDialog = vi.fn();
 
+let mockPathname = "/";
+
 const mockState = {
   auth: {
     user: {
@@ -16,7 +18,11 @@ const mockState = {
     },
   },
   users: {
-    profile: null,
+    profile: null as {
+      name: string;
+      email: string;
+      photo: string | null;
+    } | null,
   },
 };
 
@@ -24,7 +30,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({
     replace: mockReplace,
   }),
-  usePathname: () => "/",
+  usePathname: () => mockPathname,
 }));
 
 vi.mock("next/link", () => ({
@@ -45,8 +51,9 @@ vi.mock("next/link", () => ({
 
 vi.mock("@/hooks/redux", () => ({
   useAppDispatch: () => mockDispatch,
-  useAppSelector: (selector: (state: typeof mockState) => unknown) =>
-    selector(mockState),
+  useAppSelector: (
+    selector: (state: typeof mockState) => unknown
+  ) => selector(mockState),
 }));
 
 vi.mock("@/features/auth/states/reducer", async () => {
@@ -70,6 +77,8 @@ vi.mock("@/helpers/toolsHelper", () => ({
 describe("NavbarComponent", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+
+    mockPathname = "/";
 
     mockDispatch.mockResolvedValue({});
     mockShowConfirmDialog.mockResolvedValue(true);
@@ -114,6 +123,7 @@ describe("NavbarComponent", () => {
     );
 
     expect(image).toBeInTheDocument();
+
     expect(image).toHaveAttribute(
       "src",
       "https://example.com/profile.jpg"
@@ -137,7 +147,72 @@ describe("NavbarComponent", () => {
       screen.getByText("profile@example.com")
     ).toBeInTheDocument();
 
-    expect(screen.getByText("N")).toBeInTheDocument();
+    expect(
+      screen.getByText("N")
+    ).toBeInTheDocument();
+  });
+
+  it("menggunakan nama user jika nama profile kosong", () => {
+    mockState.users.profile = {
+      name: "",
+      email: "profile@example.com",
+      photo: null,
+    };
+
+    renderWithProviders(<NavbarComponent />);
+
+    expect(
+      screen.getByText("Feny Rika Pasaribu")
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText("profile@example.com")
+    ).toBeInTheDocument();
+  });
+
+  it("menggunakan email user jika email profile kosong", () => {
+    mockState.users.profile = {
+      name: "Nama Profile",
+      email: "",
+      photo: null,
+    };
+
+    renderWithProviders(<NavbarComponent />);
+
+    expect(
+      screen.getByText("Nama Profile")
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText("feny@example.com")
+    ).toBeInTheDocument();
+  });
+
+  it("menggunakan email kosong jika profile dan user tidak memiliki email", () => {
+    mockState.users.profile = {
+      name: "Nama Profile",
+      email: "",
+      photo: null,
+    };
+
+    mockState.auth.user = {
+      name: "Feny",
+      email: "",
+    };
+
+    renderWithProviders(<NavbarComponent />);
+
+    expect(
+      screen.getByText("Nama Profile")
+    ).toBeInTheDocument();
+
+    const emailElements = screen.getAllByText(
+      (_content, element) =>
+        element?.tagName.toLowerCase() === "p" &&
+        element.textContent === ""
+    );
+
+    expect(emailElements.length).toBeGreaterThan(0);
   });
 
   it("membuka dropdown ketika tombol user diklik", () => {
@@ -165,13 +240,13 @@ describe("NavbarComponent", () => {
 
     expect(
       screen.getByRole("menuitem", {
-       name: /Profil Saya/,
+        name: /Profil Saya/,
       })
     ).toBeInTheDocument();
 
     expect(
       screen.getByRole("menuitem", {
-       name: /Keluar/,
+        name: /Keluar/,
       })
     ).toBeInTheDocument();
   });
@@ -196,6 +271,26 @@ describe("NavbarComponent", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("tidak menutup dropdown ketika klik masih di dalam dropdown", () => {
+    renderWithProviders(<NavbarComponent />);
+
+    const button = screen.getByRole("button", {
+      name: /feny rika pasaribu/i,
+    });
+
+    fireEvent.click(button);
+
+    const menu = screen.getByRole("menu");
+
+    expect(menu).toBeInTheDocument();
+
+    fireEvent.mouseDown(menu);
+
+    expect(
+      screen.getByRole("menu")
+    ).toBeInTheDocument();
+  });
+
   it("menutup dropdown ketika klik di luar dropdown", () => {
     renderWithProviders(<NavbarComponent />);
 
@@ -216,6 +311,35 @@ describe("NavbarComponent", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("menampilkan menu Profil Saya sebagai aktif ketika pathname /profile", () => {
+    mockPathname = "/profile";
+
+    renderWithProviders(<NavbarComponent />);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /feny rika pasaribu/i,
+      })
+    );
+
+    const profileLink = screen.getByRole("menuitem", {
+      name: /Profil Saya/,
+    });
+
+    expect(profileLink).toHaveAttribute(
+      "href",
+      "/profile"
+    );
+
+    expect(profileLink.className).toContain(
+      "bg-yellow-50"
+    );
+
+    expect(profileLink.className).toContain(
+      "text-yellow-700"
+    );
+  });
+
   it("menutup dropdown ketika Profil Saya diklik", () => {
     renderWithProviders(<NavbarComponent />);
 
@@ -226,7 +350,7 @@ describe("NavbarComponent", () => {
     );
 
     const profileLink = screen.getByRole("menuitem", {
-     name: /Profil Saya/,
+      name: /Profil Saya/,
     });
 
     expect(profileLink).toHaveAttribute(
@@ -254,12 +378,14 @@ describe("NavbarComponent", () => {
 
     fireEvent.click(
       screen.getByRole("menuitem", {
-       name: /Keluar/,
+        name: /Keluar/,
       })
     );
 
     await waitFor(() => {
-      expect(mockShowConfirmDialog).toHaveBeenCalledWith(
+      expect(
+        mockShowConfirmDialog
+      ).toHaveBeenCalledWith(
         "Keluar dari akun?",
         "Kamu akan diarahkan kembali ke halaman login."
       );
@@ -287,7 +413,9 @@ describe("NavbarComponent", () => {
     );
 
     await waitFor(() => {
-      expect(mockShowConfirmDialog).toHaveBeenCalledWith(
+      expect(
+        mockShowConfirmDialog
+      ).toHaveBeenCalledWith(
         "Keluar dari akun?",
         "Kamu akan diarahkan kembali ke halaman login."
       );
@@ -315,7 +443,9 @@ describe("NavbarComponent", () => {
       screen.getByText("Pengguna")
     ).toBeInTheDocument();
 
-    expect(screen.getByText("P")).toBeInTheDocument();
+    expect(
+      screen.getByText("P")
+    ).toBeInTheDocument();
   });
 
   it("menggunakan email kosong jika user tidak memiliki email", () => {
@@ -326,6 +456,8 @@ describe("NavbarComponent", () => {
 
     renderWithProviders(<NavbarComponent />);
 
-    expect(screen.getByText("Feny")).toBeInTheDocument();
+    expect(
+      screen.getByText("Feny")
+    ).toBeInTheDocument();
   });
 });

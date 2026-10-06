@@ -36,6 +36,10 @@ const mocks = vi.hoisted(() => ({
   navigation: {
     postId: "1",
   },
+
+  router: {
+    replace: vi.fn(),
+  },
 }));
 
 vi.mock("@/features/posts/api/postApi", () => ({
@@ -52,7 +56,7 @@ vi.mock("@/features/users/api/userApi", () => ({
   getMyProfile: mocks.getMyProfile,
 }));
 
-vi.mock("@/helpers/toolsHelper", () => ({
+vi.mock("@/lib/dialog", () => ({
   showConfirmDialog: mocks.showConfirmDialog,
   showErrorDialog: mocks.showErrorDialog,
   showSuccessDialog: mocks.showSuccessDialog,
@@ -62,9 +66,7 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({
     postId: mocks.navigation.postId,
   }),
-  useRouter: () => ({
-    replace: mocks.replace,
-  }),
+  useRouter: () => mocks.router,
 }));
 
 vi.mock("next/link", () => ({
@@ -81,7 +83,11 @@ vi.mock("@/features/posts/layouts/PostLayout", () => ({
     children,
   }: {
     children: React.ReactNode;
-  }) => <div data-testid="post-layout">{children}</div>,
+  }) => (
+    <div data-testid="post-layout">
+      {children}
+    </div>
+  ),
 }));
 
 import DetailPage from "./DetailPage";
@@ -90,7 +96,9 @@ import DetailPage from "./DetailPage";
    TEST DATA
 ========================================================= */
 
-function createPost(overrides: Record<string, unknown> = {}) {
+function createPost(
+  overrides: Record<string, unknown> = {}
+) {
   return {
     id: 1,
     user_id: 1,
@@ -136,11 +144,12 @@ function deferred<T>() {
 }
 
 /* =========================================================
-   DEFAULT MOCK HELPERS
+   DEFAULT MOCKS
 ========================================================= */
 
 function setDefaultMocks(
-  post = createPost()
+  post = createPost(),
+  userId = 1
 ) {
   mocks.getPost.mockResolvedValue({
     data: {
@@ -151,7 +160,7 @@ function setDefaultMocks(
   mocks.getMyProfile.mockResolvedValue({
     data: {
       user: {
-        id: 1,
+        id: userId,
       },
     },
   });
@@ -181,8 +190,14 @@ function setDefaultMocks(
   });
 
   mocks.showConfirmDialog.mockResolvedValue(true);
-  mocks.showErrorDialog.mockResolvedValue(undefined);
-  mocks.showSuccessDialog.mockResolvedValue(undefined);
+
+  mocks.showErrorDialog.mockResolvedValue(
+    undefined
+  );
+
+  mocks.showSuccessDialog.mockResolvedValue(
+    undefined
+  );
 }
 
 /* =========================================================
@@ -190,13 +205,12 @@ function setDefaultMocks(
 ========================================================= */
 
 async function renderReady(
-  post = createPost()
+  post = createPost(),
+  userId = 1
 ) {
-  setDefaultMocks(post);
+  setDefaultMocks(post, userId);
 
   render(<DetailPage />);
-
-  await screen.findByText(post.description);
 
   await waitFor(() => {
     expect(
@@ -204,7 +218,25 @@ async function renderReady(
     ).not.toBeInTheDocument();
   });
 
+  await screen.findByText(post.description);
+
+  await screen.findByRole("heading", {
+    name: "Komentar",
+  });
+
   return post;
+}
+
+async function getOwnerEditButton() {
+  return screen.findByRole("button", {
+    name: "Ubah",
+  });
+}
+
+async function getCommentInput() {
+  return screen.findByPlaceholderText(
+    "Tulis komentar..."
+  );
 }
 
 function getCoverInput() {
@@ -213,10 +245,43 @@ function getCoverInput() {
   ) as HTMLInputElement | null;
 
   if (!input) {
-    throw new Error("Input cover tidak ditemukan.");
+    throw new Error(
+      "Input cover tidak ditemukan."
+    );
   }
 
   return input;
+}
+
+/* =========================================================
+   CONTROLLED TEXTAREA HELPER
+========================================================= */
+
+async function changeEditDescription(
+  value: string
+) {
+  const textarea =
+    document.querySelector(
+      'textarea[rows="6"]'
+    ) as HTMLTextAreaElement | null;
+
+  if (!textarea) {
+    throw new Error(
+      "Textarea deskripsi tidak ditemukan."
+    );
+  }
+
+  fireEvent.change(textarea, {
+    target: {
+      value,
+    },
+  });
+
+  await waitFor(() => {
+    expect(textarea).toHaveValue(value);
+  });
+
+  return textarea;
 }
 
 /* =========================================================
@@ -230,6 +295,8 @@ beforeEach(() => {
 
   mocks.navigation.postId = "1";
 
+  mocks.router.replace = mocks.replace;
+
   setDefaultMocks();
 });
 
@@ -238,9 +305,9 @@ beforeEach(() => {
 ========================================================= */
 
 describe("DetailPage", () => {
-  /* -------------------------------------------------------
+  /* =======================================================
      LOADING
-  ------------------------------------------------------- */
+  ======================================================= */
 
   it("menampilkan loading saat data masih dimuat", async () => {
     const profile = deferred<{
@@ -253,17 +320,26 @@ describe("DetailPage", () => {
 
     const post = deferred<{
       data: {
-        post: ReturnType<typeof createPost>;
+        post: ReturnType<
+          typeof createPost
+        >;
       };
     }>();
 
-    mocks.getMyProfile.mockReturnValue(profile.promise);
-    mocks.getPost.mockReturnValue(post.promise);
+    mocks.getMyProfile.mockReturnValue(
+      profile.promise
+    );
+
+    mocks.getPost.mockReturnValue(
+      post.promise
+    );
 
     render(<DetailPage />);
 
     expect(
-      screen.getByText("Memuat postingan...")
+      screen.getByText(
+        "Memuat postingan..."
+      )
     ).toBeInTheDocument();
 
     profile.resolve({
@@ -282,20 +358,24 @@ describe("DetailPage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Ini adalah postingan test.")
+        screen.getByText(
+          "Ini adalah postingan test."
+        )
       ).toBeInTheDocument();
     });
   });
 
-  /* -------------------------------------------------------
+  /* =======================================================
      BASIC DISPLAY
-  ------------------------------------------------------- */
+  ======================================================= */
 
   it("menampilkan postingan setelah loading selesai", async () => {
     await renderReady();
 
     expect(
-      screen.getByText("Ini adalah postingan test.")
+      screen.getByText(
+        "Ini adalah postingan test."
+      )
     ).toBeInTheDocument();
 
     expect(
@@ -303,16 +383,19 @@ describe("DetailPage", () => {
     ).toBeInTheDocument();
 
     expect(
-      screen.getByText("Komentar")
+      screen.getByRole("heading", {
+        name: "Komentar",
+      })
     ).toBeInTheDocument();
   });
 
   it("menampilkan cover postingan", async () => {
     await renderReady();
 
-    const image = screen.getByAltText(
-      "Cover postingan"
-    );
+    const image =
+      screen.getByAltText(
+        "Cover postingan"
+      );
 
     expect(image).toHaveAttribute(
       "src",
@@ -321,25 +404,23 @@ describe("DetailPage", () => {
   });
 
   it("menampilkan fallback ketika cover tidak tersedia", async () => {
-    await renderReady(
-      createPost({
-        cover: null,
-      })
-    );
+  await renderReady(
+    createPost({
+      cover: null,
+    })
+  );
 
-    expect(
-      screen.getByText("Tidak ada cover")
-    ).toBeInTheDocument();
-
-    expect(
-      screen.getByText("P")
-    ).toBeInTheDocument();
-  });
-
+  expect(
+    screen.getByText(
+      "Tidak ada cover"
+    )
+  ).toBeInTheDocument();
+});
   it("menampilkan foto author", async () => {
     await renderReady();
 
-    const image = screen.getByAltText("Feny");
+    const image =
+      screen.getByAltText("Feny");
 
     expect(image).toHaveAttribute(
       "src",
@@ -366,17 +447,29 @@ describe("DetailPage", () => {
     ).toBeInTheDocument();
   });
 
-  /* -------------------------------------------------------
-     OWNER
-  ------------------------------------------------------- */
+  it("menampilkan fallback nama pengguna ketika author name kosong", async () => {
+  await renderReady(
+    createPost({
+      author: {
+        name: "",
+        photo: null,
+      },
+    })
+  );
 
+  expect(
+    screen.getByText("P")
+  ).toBeInTheDocument();
+
+  expect(
+    screen.getByText("Pengguna")
+  ).toBeInTheDocument();
+});
   it("menampilkan tombol pemilik postingan", async () => {
     await renderReady();
 
     expect(
-      screen.getByRole("button", {
-        name: "Ubah",
-      })
+      await getOwnerEditButton()
     ).toBeInTheDocument();
 
     expect(
@@ -410,9 +503,9 @@ describe("DetailPage", () => {
     ).not.toBeInTheDocument();
   });
 
-  /* -------------------------------------------------------
+  /* =======================================================
      LIKE
-  ------------------------------------------------------- */
+  ======================================================= */
 
   it("menampilkan status sudah disukai", async () => {
     await renderReady(
@@ -450,6 +543,43 @@ describe("DetailPage", () => {
     ).toBeInTheDocument();
   });
 
+  it("menampilkan status belum disukai ketika likes tidak tersedia", async () => {
+    await renderReady(
+      createPost({
+        likes: undefined,
+      })
+    );
+
+    expect(
+      screen.getByRole("button", {
+        name: "♡ Suka",
+      })
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText("0 suka")
+    ).toBeInTheDocument();
+  });
+
+  it("menampilkan status belum disukai ketika current user berbeda", async () => {
+    await renderReady(
+      createPost({
+        likes: [1],
+      }),
+      99
+    );
+
+    expect(
+      screen.getByRole("button", {
+        name: "♡ Suka",
+      })
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText("1 suka")
+    ).toBeInTheDocument();
+  });
+
   it("melakukan like pada postingan", async () => {
     await renderReady(
       createPost({
@@ -460,11 +590,15 @@ describe("DetailPage", () => {
     const callsBeforeAction =
       mocks.getPost.mock.calls.length;
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "♡ Suka",
-      })
-    );
+    const button =
+      await screen.findByRole(
+        "button",
+        {
+          name: "♡ Suka",
+        }
+      );
+
+    fireEvent.click(button);
 
     await waitFor(() => {
       expect(
@@ -480,7 +614,9 @@ describe("DetailPage", () => {
     await waitFor(() => {
       expect(
         mocks.getPost.mock.calls.length
-      ).toBeGreaterThan(callsBeforeAction);
+      ).toBeGreaterThan(
+        callsBeforeAction
+      );
     });
   });
 
@@ -490,11 +626,15 @@ describe("DetailPage", () => {
     const callsBeforeAction =
       mocks.getPost.mock.calls.length;
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "♥ Disukai",
-      })
-    );
+    const button =
+      await screen.findByRole(
+        "button",
+        {
+          name: "♥ Disukai",
+        }
+      );
+
+    fireEvent.click(button);
 
     await waitFor(() => {
       expect(
@@ -510,30 +650,39 @@ describe("DetailPage", () => {
     await waitFor(() => {
       expect(
         mocks.getPost.mock.calls.length
-      ).toBeGreaterThan(callsBeforeAction);
+      ).toBeGreaterThan(
+        callsBeforeAction
+      );
     });
   });
 
   it("menampilkan loading ketika like diproses", async () => {
     await renderReady();
 
-    const action = deferred<unknown>();
+    const action =
+      deferred<unknown>();
 
     mocks.likePost.mockReturnValue(
       action.promise
     );
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "♥ Disukai",
-      })
-    );
+    const button =
+      await screen.findByRole(
+        "button",
+        {
+          name: "♥ Disukai",
+        }
+      );
 
-    expect(
-      screen.getByRole("button", {
-        name: "♥ Disukai",
-      })
-    ).toBeDisabled();
+    fireEvent.click(button);
+
+    await waitFor(() => {
+  expect(
+    screen.getByRole("button", {
+      name: "Memproses...",
+    })
+  ).toBeDisabled();
+});
 
     action.resolve({});
 
@@ -543,6 +692,47 @@ describe("DetailPage", () => {
           name: "♥ Disukai",
         })
       ).not.toBeDisabled();
+    });
+  });
+
+  it("mengabaikan klik like kedua ketika proses pertama masih berjalan", async () => {
+    await renderReady();
+
+    const action =
+      deferred<unknown>();
+
+    mocks.likePost.mockReturnValue(
+      action.promise
+    );
+
+    const button =
+      await screen.findByRole(
+        "button",
+        {
+          name: "♥ Disukai",
+        }
+      );
+
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect(button).toBeDisabled();
+    });
+
+    button.dispatchEvent(
+      new MouseEvent("click", {
+        bubbles: true,
+      })
+    );
+
+    expect(
+      mocks.likePost
+    ).toHaveBeenCalledTimes(1);
+
+    action.resolve({});
+
+    await waitFor(() => {
+      expect(button).not.toBeDisabled();
     });
   });
 
@@ -557,11 +747,15 @@ describe("DetailPage", () => {
       new Error("Like gagal")
     );
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "♡ Suka",
-      })
-    );
+    const button =
+      await screen.findByRole(
+        "button",
+        {
+          name: "♡ Suka",
+        }
+      );
+
+    fireEvent.click(button);
 
     await waitFor(() => {
       expect(
@@ -584,11 +778,15 @@ describe("DetailPage", () => {
       "error"
     );
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "♡ Suka",
-      })
-    );
+    const button =
+      await screen.findByRole(
+        "button",
+        {
+          name: "♡ Suka",
+        }
+      );
+
+    fireEvent.click(button);
 
     await waitFor(() => {
       expect(
@@ -600,24 +798,24 @@ describe("DetailPage", () => {
     });
   });
 
-  /* -------------------------------------------------------
-     UPDATE POST
-  ------------------------------------------------------- */
+  /* =======================================================
+     EDIT
+  ======================================================= */
 
   it("membuka mode edit", async () => {
     await renderReady();
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Ubah",
-      })
-    );
+    const editButton =
+      await getOwnerEditButton();
 
-    expect(
-      screen.getByDisplayValue(
+    fireEvent.click(editButton);
+
+    const textarea =
+      await screen.findByDisplayValue(
         "Ini adalah postingan test."
-      )
-    ).toBeInTheDocument();
+      );
+
+    expect(textarea).toBeInTheDocument();
 
     expect(
       screen.getByRole("button", {
@@ -635,34 +833,36 @@ describe("DetailPage", () => {
   it("membatalkan mode edit dan mengembalikan deskripsi", async () => {
     await renderReady();
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Ubah",
-      })
+    const editButton =
+      await getOwnerEditButton();
+
+    fireEvent.click(editButton);
+
+    await screen.findByDisplayValue(
+      "Ini adalah postingan test."
     );
 
-    const textarea =
-      screen.getByDisplayValue(
-        "Ini adalah postingan test."
+    await changeEditDescription(
+      "Deskripsi baru"
+    );
+
+    const cancelButton =
+      await screen.findByRole(
+        "button",
+        {
+          name: "Batal",
+        }
       );
 
-    fireEvent.change(textarea, {
-      target: {
-        value: "Deskripsi baru",
-      },
+    fireEvent.click(cancelButton);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          "Ini adalah postingan test."
+        )
+      ).toBeInTheDocument();
     });
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Batal",
-      })
-    );
-
-    expect(
-      screen.getByText(
-        "Ini adalah postingan test."
-      )
-    ).toBeInTheDocument();
 
     expect(
       screen.queryByDisplayValue(
@@ -674,28 +874,26 @@ describe("DetailPage", () => {
   it("menolak update dengan deskripsi kosong", async () => {
     await renderReady();
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Ubah",
-      })
+    const editButton =
+      await getOwnerEditButton();
+
+    fireEvent.click(editButton);
+
+    await screen.findByDisplayValue(
+      "Ini adalah postingan test."
     );
 
-    const textarea =
-      screen.getByDisplayValue(
-        "Ini adalah postingan test."
+    await changeEditDescription("   ");
+
+    const saveButton =
+      await screen.findByRole(
+        "button",
+        {
+          name: "Simpan",
+        }
       );
 
-    fireEvent.change(textarea, {
-      target: {
-        value: "   ",
-      },
-    });
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Simpan",
-      })
-    );
+    fireEvent.click(saveButton);
 
     await waitFor(() => {
       expect(
@@ -714,38 +912,40 @@ describe("DetailPage", () => {
   it("berhasil mengubah postingan", async () => {
     await renderReady();
 
-    const updatedPost = createPost({
-      description: "Deskripsi sudah diperbarui.",
-    });
+    const updatedPost =
+      createPost({
+        description:
+          "Deskripsi sudah diperbarui.",
+      });
 
-    mocks.getPost.mockResolvedValue({
+    mocks.getPost.mockResolvedValueOnce({
       data: {
         post: updatedPost,
       },
     });
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Ubah",
-      })
+    const editButton =
+      await getOwnerEditButton();
+
+    fireEvent.click(editButton);
+
+    await screen.findByDisplayValue(
+      "Ini adalah postingan test."
     );
 
-    const textarea =
-      screen.getByDisplayValue(
-        "Ini adalah postingan test."
+    await changeEditDescription(
+      "Deskripsi sudah diperbarui."
+    );
+
+    const saveButton =
+      await screen.findByRole(
+        "button",
+        {
+          name: "Simpan",
+        }
       );
 
-    fireEvent.change(textarea, {
-      target: {
-        value: "Deskripsi sudah diperbarui.",
-      },
-    });
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Simpan",
-      })
-    );
+    fireEvent.click(saveButton);
 
     await waitFor(() => {
       expect(
@@ -768,47 +968,113 @@ describe("DetailPage", () => {
       );
     });
 
-    expect(
-      screen.getByText(
-        "Deskripsi sudah diperbarui."
-      )
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          "Deskripsi sudah diperbarui."
+        )
+      ).toBeInTheDocument();
+    });
   });
 
   it("menampilkan loading ketika update diproses", async () => {
     await renderReady();
 
-    const action = deferred<unknown>();
+    const action =
+      deferred<unknown>();
 
     mocks.updatePost.mockReturnValue(
       action.promise
     );
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Ubah",
-      })
-    );
+    const editButton =
+      await getOwnerEditButton();
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Simpan",
-      })
-    );
+    fireEvent.click(editButton);
 
-    expect(
-      screen.getByRole("button", {
-        name: "Menyimpan...",
-      })
-    ).toBeDisabled();
+    const saveButton =
+      await screen.findByRole(
+        "button",
+        {
+          name: "Simpan",
+        }
+      );
+
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: "Menyimpan...",
+        })
+      ).toBeDisabled();
+    });
 
     action.resolve({});
 
     await waitFor(() => {
       expect(
-        screen.queryByRole("button", {
-          name: "Menyimpan...",
-        })
+        screen.queryByRole(
+          "button",
+          {
+            name: "Menyimpan...",
+          }
+        )
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("menangani klik simpan kedua ketika update masih berjalan", async () => {
+    await renderReady();
+
+    const action =
+      deferred<unknown>();
+
+    mocks.updatePost.mockReturnValue(
+      action.promise
+    );
+
+    const editButton =
+      await getOwnerEditButton();
+
+    fireEvent.click(editButton);
+
+    const saveButton =
+      await screen.findByRole(
+        "button",
+        {
+          name: "Simpan",
+        }
+      );
+
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(
+        saveButton
+      ).toBeDisabled();
+    });
+
+    saveButton.dispatchEvent(
+      new MouseEvent("click", {
+        bubbles: true,
+      })
+    );
+
+    expect(
+      mocks.updatePost
+    ).toHaveBeenCalledTimes(1);
+
+    action.resolve({});
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole(
+          "button",
+          {
+            name: "Menyimpan...",
+          }
+        )
       ).not.toBeInTheDocument();
     });
   });
@@ -820,28 +1086,39 @@ describe("DetailPage", () => {
       new Error("Update gagal")
     );
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Ubah",
-      })
+    const editButton =
+      await getOwnerEditButton();
+
+    fireEvent.click(editButton);
+
+    await screen.findByDisplayValue(
+      "Ini adalah postingan test."
     );
 
-    fireEvent.change(
-      screen.getByDisplayValue(
-        "Ini adalah postingan test."
-      ),
-      {
-        target: {
-          value: "Deskripsi baru",
-        },
-      }
+    await changeEditDescription(
+      "Deskripsi baru"
     );
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Simpan",
-      })
-    );
+    const saveButton =
+      await screen.findByRole(
+        "button",
+        {
+          name: "Simpan",
+        }
+      );
+
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(
+        mocks.updatePost
+      ).toHaveBeenCalledWith(
+        1,
+        {
+          description: "Deskripsi baru",
+        }
+      );
+    });
 
     await waitFor(() => {
       expect(
@@ -860,28 +1137,39 @@ describe("DetailPage", () => {
       "error"
     );
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Ubah",
-      })
+    const editButton =
+      await getOwnerEditButton();
+
+    fireEvent.click(editButton);
+
+    await screen.findByDisplayValue(
+      "Ini adalah postingan test."
     );
 
-    fireEvent.change(
-      screen.getByDisplayValue(
-        "Ini adalah postingan test."
-      ),
-      {
-        target: {
-          value: "Deskripsi baru",
-        },
-      }
+    await changeEditDescription(
+      "Deskripsi baru"
     );
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Simpan",
-      })
-    );
+    const saveButton =
+      await screen.findByRole(
+        "button",
+        {
+          name: "Simpan",
+        }
+      );
+
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(
+        mocks.updatePost
+      ).toHaveBeenCalledWith(
+        1,
+        {
+          description: "Deskripsi baru",
+        }
+      );
+    });
 
     await waitFor(() => {
       expect(
@@ -893,9 +1181,9 @@ describe("DetailPage", () => {
     });
   });
 
-  /* -------------------------------------------------------
+  /* =======================================================
      COVER
-  ------------------------------------------------------- */
+  ======================================================= */
 
   it("mengubah cover dengan file gambar", async () => {
     await renderReady();
@@ -935,10 +1223,33 @@ describe("DetailPage", () => {
     });
   });
 
+  it("mengabaikan perubahan cover jika file tidak dipilih", async () => {
+    await renderReady();
+
+    const input = getCoverInput();
+
+    fireEvent.change(input, {
+      target: {
+        files: [],
+      },
+    });
+
+    await waitFor(() => {
+      expect(
+        mocks.updatePostCover
+      ).not.toHaveBeenCalled();
+    });
+
+    expect(
+      mocks.showErrorDialog
+    ).not.toHaveBeenCalled();
+  });
+
   it("menampilkan loading ketika cover diubah", async () => {
     await renderReady();
 
-    const action = deferred<unknown>();
+    const action =
+      deferred<unknown>();
 
     mocks.updatePostCover.mockReturnValue(
       action.promise
@@ -960,9 +1271,13 @@ describe("DetailPage", () => {
       },
     });
 
-    expect(
-      screen.getByText("Mengubah...")
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          "Mengubah..."
+        )
+      ).toBeInTheDocument();
+    });
 
     action.resolve({});
 
@@ -1039,17 +1354,53 @@ describe("DetailPage", () => {
     });
   });
 
-  /* -------------------------------------------------------
+  it("menangani error cover non Error", async () => {
+    await renderReady();
+
+    mocks.updatePostCover.mockRejectedValue(
+      "error"
+    );
+
+    const input = getCoverInput();
+
+    const file = new File(
+      ["image"],
+      "cover.png",
+      {
+        type: "image/png"
+      }
+    );
+
+    fireEvent.change(input, {
+      target: {
+        files: [file],
+      },
+    });
+
+    await waitFor(() => {
+      expect(
+        mocks.showErrorDialog
+      ).toHaveBeenCalledWith(
+        "Gagal mengubah cover",
+        "Cover gagal diperbarui."
+      );
+    });
+  });
+
+  /* =======================================================
      DELETE POST
-  ------------------------------------------------------- */
+  ======================================================= */
 
   it("menghapus postingan setelah konfirmasi", async () => {
     await renderReady();
 
     fireEvent.click(
-      screen.getByRole("button", {
-        name: "Hapus",
-      })
+      await screen.findByRole(
+        "button",
+        {
+          name: "Hapus",
+        }
+      )
     );
 
     await waitFor(() => {
@@ -1089,9 +1440,12 @@ describe("DetailPage", () => {
     );
 
     fireEvent.click(
-      screen.getByRole("button", {
-        name: "Hapus",
-      })
+      await screen.findByRole(
+        "button",
+        {
+          name: "Hapus",
+        }
+      )
     );
 
     await waitFor(() => {
@@ -1108,16 +1462,20 @@ describe("DetailPage", () => {
   it("menampilkan loading ketika postingan dihapus", async () => {
     await renderReady();
 
-    const action = deferred<unknown>();
+    const action =
+      deferred<unknown>();
 
     mocks.deletePost.mockReturnValue(
       action.promise
     );
 
     fireEvent.click(
-      screen.getByRole("button", {
-        name: "Hapus",
-      })
+      await screen.findByRole(
+        "button",
+        {
+          name: "Hapus",
+        }
+      )
     );
 
     await waitFor(() => {
@@ -1137,6 +1495,49 @@ describe("DetailPage", () => {
     });
   });
 
+  it("mengabaikan klik hapus kedua ketika proses pertama masih berjalan", async () => {
+    await renderReady();
+
+    const action =
+      deferred<unknown>();
+
+    mocks.deletePost.mockReturnValue(
+      action.promise
+    );
+
+    const button =
+      await screen.findByRole(
+        "button",
+        {
+          name: "Hapus",
+        }
+      );
+
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect(button).toBeDisabled();
+    });
+
+    button.dispatchEvent(
+      new MouseEvent("click", {
+        bubbles: true,
+      })
+    );
+
+    expect(
+      mocks.deletePost
+    ).toHaveBeenCalledTimes(1);
+
+    action.resolve({});
+
+    await waitFor(() => {
+      expect(
+        mocks.replace
+      ).toHaveBeenCalledWith("/");
+    });
+  });
+
   it("menangani error hapus postingan", async () => {
     await renderReady();
 
@@ -1145,9 +1546,12 @@ describe("DetailPage", () => {
     );
 
     fireEvent.click(
-      screen.getByRole("button", {
-        name: "Hapus",
-      })
+      await screen.findByRole(
+        "button",
+        {
+          name: "Hapus",
+        }
+      )
     );
 
     await waitFor(() => {
@@ -1160,15 +1564,43 @@ describe("DetailPage", () => {
     });
   });
 
-  /* -------------------------------------------------------
+  it("menangani error hapus postingan non Error", async () => {
+    await renderReady();
+
+    mocks.deletePost.mockRejectedValue(
+      "error"
+    );
+
+    fireEvent.click(
+      await screen.findByRole(
+        "button",
+        {
+          name: "Hapus",
+        }
+      )
+    );
+
+    await waitFor(() => {
+      expect(
+        mocks.showErrorDialog
+      ).toHaveBeenCalledWith(
+        "Gagal menghapus",
+        "Postingan gagal dihapus."
+      );
+    });
+  });
+
+  /* =======================================================
      COMMENTS DISPLAY
-  ------------------------------------------------------- */
+  ======================================================= */
 
   it("menampilkan komentar yang tersedia", async () => {
     await renderReady();
 
     expect(
-      screen.getByText("Komentar test.")
+      screen.getByText(
+        "Komentar test."
+      )
     ).toBeInTheDocument();
   });
 
@@ -1180,13 +1612,33 @@ describe("DetailPage", () => {
     );
 
     expect(
-      screen.getByText("Belum ada komentar.")
+      screen.getByText(
+        "Belum ada komentar."
+      )
     ).toBeInTheDocument();
   });
 
-  /* -------------------------------------------------------
+  it("menampilkan pesan ketika comments undefined", async () => {
+    await renderReady(
+      createPost({
+        comments: undefined,
+      })
+    );
+
+    expect(
+      screen.getByText(
+        "Belum ada komentar."
+      )
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText("0 komentar")
+    ).toBeInTheDocument();
+  });
+
+  /* =======================================================
      ADD COMMENT
-  ------------------------------------------------------- */
+  ======================================================= */
 
   it("mengirim komentar", async () => {
     await renderReady();
@@ -1195,9 +1647,7 @@ describe("DetailPage", () => {
       mocks.getPost.mock.calls.length;
 
     const textarea =
-      screen.getByPlaceholderText(
-        "Tulis komentar..."
-      );
+      await getCommentInput();
 
     fireEvent.change(textarea, {
       target: {
@@ -1206,9 +1656,12 @@ describe("DetailPage", () => {
     });
 
     fireEvent.click(
-      screen.getByRole("button", {
-        name: "Kirim Komentar",
-      })
+      await screen.findByRole(
+        "button",
+        {
+          name: "Kirim Komentar",
+        }
+      )
     );
 
     await waitFor(() => {
@@ -1225,7 +1678,9 @@ describe("DetailPage", () => {
     await waitFor(() => {
       expect(
         mocks.getPost.mock.calls.length
-      ).toBeGreaterThan(callsBeforeAction);
+      ).toBeGreaterThan(
+        callsBeforeAction
+      );
     });
 
     await waitFor(() => {
@@ -1238,13 +1693,50 @@ describe("DetailPage", () => {
     });
   });
 
+  it("mengirim komentar setelah spasi dipangkas", async () => {
+    await renderReady();
+
+    const textarea =
+      await getCommentInput();
+
+    fireEvent.change(textarea, {
+      target: {
+        value: "   Komentar dengan spasi   ",
+      },
+    });
+
+    fireEvent.click(
+      await screen.findByRole(
+        "button",
+        {
+          name: "Kirim Komentar",
+        }
+      )
+    );
+
+    await waitFor(() => {
+      expect(
+        mocks.addComment
+      ).toHaveBeenCalledWith(
+        1,
+        {
+          comment:
+            "Komentar dengan spasi",
+        }
+      );
+    });
+  });
+
   it("menolak komentar kosong", async () => {
     await renderReady();
 
     fireEvent.click(
-      screen.getByRole("button", {
-        name: "Kirim Komentar",
-      })
+      await screen.findByRole(
+        "button",
+        {
+          name: "Kirim Komentar",
+        }
+      )
     );
 
     await waitFor(() => {
@@ -1264,34 +1756,92 @@ describe("DetailPage", () => {
   it("menampilkan loading ketika komentar dikirim", async () => {
     await renderReady();
 
-    const action = deferred<unknown>();
+    const action =
+      deferred<unknown>();
 
     mocks.addComment.mockReturnValue(
       action.promise
     );
 
-    fireEvent.change(
-      screen.getByPlaceholderText(
-        "Tulis komentar..."
-      ),
-      {
-        target: {
-          value: "Komentar loading",
-        },
-      }
-    );
+    const textarea =
+      await getCommentInput();
+
+    fireEvent.change(textarea, {
+      target: {
+        value: "Komentar loading",
+      },
+    });
 
     fireEvent.click(
-      screen.getByRole("button", {
-        name: "Kirim Komentar",
+      await screen.findByRole(
+        "button",
+        {
+          name: "Kirim Komentar",
+        }
+      )
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: "Mengirim...",
+        })
+      ).toBeDisabled();
+    });
+
+    action.resolve({});
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: "Kirim Komentar",
+        })
+      ).not.toBeDisabled();
+    });
+  });
+
+  it("mengabaikan submit komentar kedua ketika proses pertama masih berjalan", async () => {
+    await renderReady();
+
+    const action =
+      deferred<unknown>();
+
+    mocks.addComment.mockReturnValue(
+      action.promise
+    );
+
+    const textarea =
+      await getCommentInput();
+
+    fireEvent.change(textarea, {
+      target: {
+        value: "Komentar kedua",
+      },
+    });
+
+    const button =
+      await screen.findByRole(
+        "button",
+        {
+          name: "Kirim Komentar",
+        }
+      );
+
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect(button).toBeDisabled();
+    });
+
+    button.dispatchEvent(
+      new MouseEvent("click", {
+        bubbles: true,
       })
     );
 
     expect(
-      screen.getByRole("button", {
-        name: "Mengirim...",
-      })
-    ).toBeDisabled();
+      mocks.addComment
+    ).toHaveBeenCalledTimes(1);
 
     action.resolve({});
 
@@ -1311,21 +1861,22 @@ describe("DetailPage", () => {
       new Error("Komentar gagal")
     );
 
-    fireEvent.change(
-      screen.getByPlaceholderText(
-        "Tulis komentar..."
-      ),
-      {
-        target: {
-          value: "Komentar error",
-        },
-      }
-    );
+    const textarea =
+      await getCommentInput();
+
+    fireEvent.change(textarea, {
+      target: {
+        value: "Komentar error",
+      },
+    });
 
     fireEvent.click(
-      screen.getByRole("button", {
-        name: "Kirim Komentar",
-      })
+      await screen.findByRole(
+        "button",
+        {
+          name: "Kirim Komentar",
+        }
+      )
     );
 
     await waitFor(() => {
@@ -1338,17 +1889,55 @@ describe("DetailPage", () => {
     });
   });
 
-  /* -------------------------------------------------------
+  it("menangani error komentar non Error", async () => {
+    await renderReady();
+
+    mocks.addComment.mockRejectedValue(
+      "error"
+    );
+
+    const textarea =
+      await getCommentInput();
+
+    fireEvent.change(textarea, {
+      target: {
+        value: "Komentar error",
+      },
+    });
+
+    fireEvent.click(
+      await screen.findByRole(
+        "button",
+        {
+          name: "Kirim Komentar",
+        }
+      )
+    );
+
+    await waitFor(() => {
+      expect(
+        mocks.showErrorDialog
+      ).toHaveBeenCalledWith(
+        "Komentar gagal",
+        "Gagal menambahkan komentar."
+      );
+    });
+  });
+
+  /* =======================================================
      DELETE COMMENT
-  ------------------------------------------------------- */
+  ======================================================= */
 
   it("menghapus komentar sendiri", async () => {
     await renderReady();
 
     fireEvent.click(
-      screen.getByRole("button", {
-        name: "Hapus komentar saya",
-      })
+      await screen.findByRole(
+        "button",
+        {
+          name: /Hapus Komentar Saya/i,
+        }
+      )
     );
 
     await waitFor(() => {
@@ -1384,9 +1973,12 @@ describe("DetailPage", () => {
     );
 
     fireEvent.click(
-      screen.getByRole("button", {
-        name: "Hapus komentar saya",
-      })
+      await screen.findByRole(
+        "button",
+        {
+          name: /Hapus Komentar Saya/i,
+        }
+      )
     );
 
     await waitFor(() => {
@@ -1403,16 +1995,20 @@ describe("DetailPage", () => {
   it("menampilkan loading ketika komentar dihapus", async () => {
     await renderReady();
 
-    const action = deferred<unknown>();
+    const action =
+      deferred<unknown>();
 
     mocks.deleteComment.mockReturnValue(
       action.promise
     );
 
     fireEvent.click(
-      screen.getByRole("button", {
-        name: "Hapus komentar saya",
-      })
+      await screen.findByRole(
+        "button",
+        {
+          name: /Hapus Komentar Saya/i,
+        }
+      )
     );
 
     await waitFor(() => {
@@ -1427,10 +2023,54 @@ describe("DetailPage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("button", {
-          name: "Hapus komentar saya",
-        })
+        screen.getByRole(
+          "button",
+          {
+            name: /Hapus Komentar Saya/i,
+          }
+        )
       ).not.toBeDisabled();
+    });
+  });
+
+  it("mengabaikan klik hapus komentar kedua ketika proses pertama masih berjalan", async () => {
+    await renderReady();
+
+    const action =
+      deferred<unknown>();
+
+    mocks.deleteComment.mockReturnValue(
+      action.promise
+    );
+
+    const button =
+      await screen.findByRole(
+        "button",
+        {
+          name: /Hapus Komentar Saya/i,
+        }
+      );
+
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect(button).toBeDisabled();
+    });
+
+    button.dispatchEvent(
+      new MouseEvent("click", {
+        bubbles: true,
+      })
+    );
+
+    expect(
+      mocks.deleteComment
+    ).toHaveBeenCalledTimes(1);
+
+    action.resolve({});
+
+    await waitFor(() => {
+      expect(button).not.toBeDisabled();
     });
   });
 
@@ -1438,13 +2078,18 @@ describe("DetailPage", () => {
     await renderReady();
 
     mocks.deleteComment.mockRejectedValue(
-      new Error("Komentar delete gagal")
+      new Error(
+        "Komentar delete gagal"
+      )
     );
 
     fireEvent.click(
-      screen.getByRole("button", {
-        name: "Hapus komentar saya",
-      })
+      await screen.findByRole(
+        "button",
+        {
+          name: /Hapus Komentar Saya/i,
+        }
+      )
     );
 
     await waitFor(() => {
@@ -1453,6 +2098,32 @@ describe("DetailPage", () => {
       ).toHaveBeenCalledWith(
         "Gagal menghapus komentar",
         "Komentar delete gagal"
+      );
+    });
+  });
+
+  it("menangani error hapus komentar non Error", async () => {
+    await renderReady();
+
+    mocks.deleteComment.mockRejectedValue(
+      "error"
+    );
+
+    fireEvent.click(
+      await screen.findByRole(
+        "button",
+        {
+          name: /Hapus Komentar Saya/i,
+        }
+      )
+    );
+
+    await waitFor(() => {
+      expect(
+        mocks.showErrorDialog
+      ).toHaveBeenCalledWith(
+        "Gagal menghapus komentar",
+        "Komentar gagal dihapus."
       );
     });
   });
@@ -1466,14 +2137,18 @@ describe("DetailPage", () => {
 
     expect(
       screen.queryByRole("button", {
-        name: "Hapus komentar saya",
+        name: /Hapus Komentar Saya/i,
       })
     ).not.toBeInTheDocument();
   });
+  /* =======================================================
+     GUARD / EARLY RETURN COVER
+  ======================================================= */
 
-  /* -------------------------------------------------------
-     INITIAL ERROR
-  ------------------------------------------------------- */
+ 
+  /* =======================================================
+     LOAD ERRORS
+  ======================================================= */
 
   it("menangani post yang gagal dimuat", async () => {
     mocks.getPost.mockRejectedValue(
@@ -1551,32 +2226,37 @@ describe("DetailPage", () => {
     });
   });
 
-  /* -------------------------------------------------------
-     INVALID ID
-  ------------------------------------------------------- */
-
   it("menangani postId tidak valid", async () => {
     mocks.navigation.postId = "abc";
 
     render(<DetailPage />);
 
-    await waitFor(() => {
-      expect(
-        mocks.showErrorDialog
-      ).toHaveBeenCalledWith(
-        "Postingan tidak ditemukan",
+    expect(
+      await screen.findByRole("heading", {
+        name: "Postingan tidak ditemukan",
+      })
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText(
         "ID postingan tidak valid."
-      );
-    });
+      )
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Kembali",
+      })
+    );
 
     expect(
       mocks.replace
     ).toHaveBeenCalledWith("/");
   });
 
-  /* -------------------------------------------------------
-     REFRESH ERROR
-  ------------------------------------------------------- */
+  /* =======================================================
+     REFRESH ERRORS
+  ======================================================= */
 
   it("mengabaikan refresh post yang gagal setelah komentar", async () => {
     await renderReady();
@@ -1585,21 +2265,22 @@ describe("DetailPage", () => {
       new Error("Refresh gagal")
     );
 
-    fireEvent.change(
-      screen.getByPlaceholderText(
-        "Tulis komentar..."
-      ),
-      {
-        target: {
-          value: "Komentar refresh",
-        },
-      }
-    );
+    const textarea =
+      await getCommentInput();
+
+    fireEvent.change(textarea, {
+      target: {
+        value: "Komentar refresh",
+      },
+    });
 
     fireEvent.click(
-      screen.getByRole("button", {
-        name: "Kirim Komentar",
-      })
+      await screen.findByRole(
+        "button",
+        {
+          name: "Kirim Komentar",
+        }
+      )
     );
 
     await waitFor(() => {
@@ -1630,28 +2311,28 @@ describe("DetailPage", () => {
       new Error("Refresh gagal")
     );
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Ubah",
-      })
+    const editButton =
+      await getOwnerEditButton();
+
+    fireEvent.click(editButton);
+
+    await screen.findByDisplayValue(
+      "Ini adalah postingan test."
     );
 
-    fireEvent.change(
-      screen.getByDisplayValue(
-        "Ini adalah postingan test."
-      ),
-      {
-        target: {
-          value: "Update refresh gagal",
-        },
-      }
+    await changeEditDescription(
+      "Update refresh gagal"
     );
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Simpan",
-      })
-    );
+    const saveButton =
+      await screen.findByRole(
+        "button",
+        {
+          name: "Simpan",
+        }
+      );
+
+    fireEvent.click(saveButton);
 
     await waitFor(() => {
       expect(
@@ -1673,5 +2354,116 @@ describe("DetailPage", () => {
         "Postingan berhasil diperbarui."
       );
     });
+  });
+
+  it("tetap menyelesaikan perubahan cover jika refresh gagal", async () => {
+    await renderReady();
+
+    mocks.getPost.mockRejectedValueOnce(
+      new Error("Refresh cover gagal")
+    );
+
+    const input = getCoverInput();
+
+    const file = new File(
+      ["image"],
+      "cover.png",
+      {
+        type: "image/png",
+      }
+    );
+
+    fireEvent.change(input, {
+      target: {
+        files: [file],
+      },
+    });
+
+    await waitFor(() => {
+      expect(
+        mocks.updatePostCover
+      ).toHaveBeenCalledWith(
+        1,
+        file
+      );
+    });
+
+    await waitFor(() => {
+      expect(
+        mocks.showSuccessDialog
+      ).toHaveBeenCalledWith(
+        "Berhasil",
+        "Cover postingan berhasil diperbarui."
+      );
+    });
+  });
+
+  it("tetap menyelesaikan hapus komentar jika refresh gagal", async () => {
+    await renderReady();
+
+    mocks.getPost.mockRejectedValueOnce(
+      new Error("Refresh komentar gagal")
+    );
+
+    fireEvent.click(
+      await screen.findByRole(
+        "button",
+        {
+          name: /Hapus Komentar Saya/i,
+        }
+      )
+    );
+
+    await waitFor(() => {
+      expect(
+        mocks.deleteComment
+      ).toHaveBeenCalledWith(1);
+    });
+
+    await waitFor(() => {
+      expect(
+        mocks.showSuccessDialog
+      ).toHaveBeenCalledWith(
+        "Berhasil",
+        "Komentar berhasil dihapus."
+      );
+    });
+  });
+
+  it("tetap menyelesaikan like jika refresh gagal", async () => {
+    await renderReady();
+
+    mocks.getPost.mockRejectedValueOnce(
+      new Error("Refresh like gagal")
+    );
+
+    const button =
+      await screen.findByRole(
+        "button",
+        {
+          name: "♥ Disukai",
+        }
+      );
+
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect(
+        mocks.likePost
+      ).toHaveBeenCalledWith(
+        1,
+        {
+          like: 0,
+        }
+      );
+    });
+
+    await waitFor(() => {
+      expect(button).not.toBeDisabled();
+    });
+
+    expect(
+      mocks.showErrorDialog
+    ).not.toHaveBeenCalled();
   });
 });

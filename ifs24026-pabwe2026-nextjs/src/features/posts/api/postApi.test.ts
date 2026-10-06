@@ -1,303 +1,353 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { apiFetch } from "@/helpers/apiHelper";
+
 import {
-  addComment,
-  addPost,
-  deleteAllPosts,
-  deleteComment,
-  deletePost,
-  getPost,
   getPosts,
-  likePost,
+  getPost,
+  addPost,
   updatePost,
   updatePostCover,
-} from "@/features/posts/api/postApi";
+  deletePost,
+  likePost,
+  addComment,
+  deleteComment,
+  deleteAllPosts,
+} from "./postApi";
 
 vi.mock("@/helpers/apiHelper", () => ({
   apiFetch: vi.fn(),
 }));
-
-const mockApiFetch = vi.mocked(apiFetch);
 
 describe("postApi", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("getPosts mengambil semua postingan tanpa filter", async () => {
-    const response = {
-      status: "success",
-      message: "Berhasil mengambil postingan",
-      data: {
-        posts: [],
-      },
-    };
-
-    mockApiFetch.mockResolvedValue(response);
-
-    const result = await getPosts();
-
-    expect(result).toEqual(response);
-
-    expect(mockApiFetch).toHaveBeenCalledWith(
-      "/api/v1/posts",
-      {
-        method: "GET",
-        query: undefined,
-      }
-    );
-  });
-
-  it("getPosts mengambil postingan milik pengguna aktif", async () => {
-    const response = {
-      status: "success",
-      message: "Berhasil",
-      data: {
-        posts: [],
-      },
-    };
-
-    mockApiFetch.mockResolvedValue(response);
-
-    const result = await getPosts(true);
-
-    expect(result).toEqual(response);
-
-    expect(mockApiFetch).toHaveBeenCalledWith(
-      "/api/v1/posts",
-      {
-        method: "GET",
-        query: {
-          is_me: 1,
+  describe("getPosts", () => {
+    it("mengambil semua postingan", async () => {
+      const response = {
+        status: "success",
+        message: "Berhasil",
+        data: {
+          posts: [],
         },
-      }
-    );
-  });
+      };
 
-  it("getPost mengambil detail postingan berdasarkan ID", async () => {
-    const response = {
-      status: "success",
-      message: "Berhasil",
-      data: {
-        post: {
-          id: 10,
+      vi.mocked(apiFetch).mockResolvedValue(response);
+
+      const result = await getPosts();
+
+      expect(apiFetch).toHaveBeenCalledWith(
+        "/api/v1/posts",
+        {
+          method: "GET",
+          query: undefined,
+        }
+      );
+
+      expect(result).toEqual(response);
+    });
+
+    it("mengambil postingan milik user", async () => {
+      const response = {
+        status: "success",
+        message: "Berhasil",
+        data: {
+          posts: [],
         },
-      },
-    };
+      };
 
-    mockApiFetch.mockResolvedValue(response);
+      vi.mocked(apiFetch).mockResolvedValue(response);
 
-    const result = await getPost(10);
+      const result = await getPosts(true);
 
-    expect(result).toEqual(response);
+      expect(apiFetch).toHaveBeenCalledWith(
+        "/api/v1/posts",
+        {
+          method: "GET",
+          query: {
+            is_me: 1,
+          },
+        }
+      );
 
-    expect(mockApiFetch).toHaveBeenCalledWith(
-      "/api/v1/posts/10",
-      {
-        method: "GET",
-      }
-    );
+      expect(result).toEqual(response);
+    });
+
+    it("meneruskan error dari apiFetch", async () => {
+      const error = new Error("Gagal mengambil postingan");
+
+      vi.mocked(apiFetch).mockRejectedValue(error);
+
+      await expect(getPosts()).rejects.toThrow(
+        "Gagal mengambil postingan"
+      );
+    });
   });
 
-  it("addPost menambahkan postingan baru", async () => {
-    const data = {
-      description: "Postingan baru",
-    };
+  describe("getPost", () => {
+    it("mengambil detail postingan", async () => {
+      const response = {
+        status: "success",
+        message: "Berhasil",
+        data: {
+          post: {} as never,
+        },
+      };
 
-    const response = {
-      status: "success",
-      message: "Postingan berhasil ditambahkan",
-      data: {
-        post_id: 25,
-      },
-    };
+      vi.mocked(apiFetch).mockResolvedValue(response);
 
-    mockApiFetch.mockResolvedValue(response);
+      const result = await getPost(10);
 
-    const result = await addPost(data);
+      expect(apiFetch).toHaveBeenCalledWith(
+        "/api/v1/posts/10",
+        {
+          method: "GET",
+        }
+      );
 
-    expect(result).toEqual(response);
-
-    expect(mockApiFetch).toHaveBeenCalledWith(
-      "/api/v1/posts",
-      {
-        method: "POST",
-        body: JSON.stringify(data),
-      }
-    );
+      expect(result).toEqual(response);
+    });
   });
 
-  it("updatePost memperbarui deskripsi postingan", async () => {
-    const data = {
-      description: "Deskripsi yang diperbarui",
-    };
+  describe("addPost", () => {
+    it("menambahkan postingan", async () => {
+      const data = {
+        description: "Postingan baru",
+      };
 
-    const response = {
-      status: "success",
-      message: "Postingan berhasil diperbarui",
-    };
+      const response = {
+        status: "success",
+        message: "Berhasil",
+        data: {
+          post_id: 1,
+        },
+      };
 
-    mockApiFetch.mockResolvedValue(response);
+      vi.mocked(apiFetch).mockResolvedValue(response);
 
-    const result = await updatePost(15, data);
+      const result = await addPost(data);
 
-    expect(result).toEqual(response);
+      expect(apiFetch).toHaveBeenCalledWith(
+        "/api/v1/posts",
+        {
+          method: "POST",
+          body: JSON.stringify(data),
+        }
+      );
 
-    expect(mockApiFetch).toHaveBeenCalledWith(
-      "/api/v1/posts/15",
-      {
-        method: "PUT",
-        body: JSON.stringify(data),
-      }
-    );
+      expect(result).toEqual(response);
+    });
   });
 
-  it("updatePostCover mengunggah cover postingan", async () => {
-    const file = new File(
-      ["cover image"],
-      "cover.jpg",
-      {
-        type: "image/jpeg",
-      }
-    );
+  describe("updatePost", () => {
+    it("mengubah postingan", async () => {
+      const data = {
+        description: "Postingan yang diubah",
+      };
 
-    const response = {
-      status: "success",
-      message: "Cover berhasil diperbarui",
-    };
+      const response = {
+        status: "success",
+        message: "Berhasil",
+      };
 
-    mockApiFetch.mockResolvedValue(response);
+      vi.mocked(apiFetch).mockResolvedValue(response);
 
-    const result = await updatePostCover(20, file);
+      const result = await updatePost(5, data);
 
-    expect(result).toEqual(response);
+      expect(apiFetch).toHaveBeenCalledWith(
+        "/api/v1/posts/5",
+        {
+          method: "PUT",
+          body: JSON.stringify(data),
+        }
+      );
 
-    expect(mockApiFetch).toHaveBeenCalledTimes(1);
-
-    const [url, options] =
-      mockApiFetch.mock.calls[0];
-
-    expect(url).toBe(
-      "/api/v1/posts/20/cover"
-    );
-
-    expect(options?.method).toBe("POST");
-    expect(options?.body).toBeInstanceOf(FormData);
-
-    const formData =
-      options?.body as FormData;
-
-    expect(formData.get("cover")).toBe(file);
+      expect(result).toEqual(response);
+    });
   });
 
-  it("deletePost menghapus satu postingan", async () => {
-    const response = {
-      status: "success",
-      message: "Postingan berhasil dihapus",
-    };
+  describe("updatePostCover", () => {
+    it("mengubah cover postingan", async () => {
+      const file = new File(
+        ["gambar"],
+        "cover.jpg",
+        {
+          type: "image/jpeg",
+        }
+      );
 
-    mockApiFetch.mockResolvedValue(response);
+      const response = {
+        status: "success",
+        message: "Berhasil",
+      };
 
-    const result = await deletePost(30);
+      vi.mocked(apiFetch).mockResolvedValue(response);
 
-    expect(result).toEqual(response);
+      const result = await updatePostCover(7, file);
 
-    expect(mockApiFetch).toHaveBeenCalledWith(
-      "/api/v1/posts/30",
-      {
-        method: "DELETE",
-      }
-    );
+      expect(apiFetch).toHaveBeenCalledTimes(1);
+
+      const call = vi.mocked(apiFetch).mock.calls[0];
+
+      expect(call[0]).toBe(
+        "/api/v1/posts/7/cover"
+      );
+
+      expect(call[1]?.method).toBe("POST");
+      expect(call[1]?.body).toBeInstanceOf(FormData);
+
+      const formData = call[1]?.body as FormData;
+
+      expect(formData.get("cover")).toBe(file);
+
+      expect(result).toEqual(response);
+    });
   });
 
-  it("likePost mengirim status like", async () => {
-    const data = {
-      like: 1 as const,
-    };
+  describe("deletePost", () => {
+    it("menghapus satu postingan", async () => {
+      const response = {
+        status: "success",
+        message: "Berhasil",
+      };
 
-    const response = {
-      status: "success",
-      message: "Like berhasil",
-    };
+      vi.mocked(apiFetch).mockResolvedValue(response);
 
-    mockApiFetch.mockResolvedValue(response);
+      const result = await deletePost(8);
 
-    const result = await likePost(40, data);
+      expect(apiFetch).toHaveBeenCalledWith(
+        "/api/v1/posts/8",
+        {
+          method: "DELETE",
+        }
+      );
 
-    expect(result).toEqual(response);
-
-    expect(mockApiFetch).toHaveBeenCalledWith(
-      "/api/v1/posts/40/likes",
-      {
-        method: "POST",
-        body: JSON.stringify(data),
-      }
-    );
+      expect(result).toEqual(response);
+    });
   });
 
-  it("addComment menambahkan komentar", async () => {
-    const data = {
-      comment: "Komentar saya",
-    };
+  describe("likePost", () => {
+    it("memberikan like", async () => {
+      const data = {
+        like: 1 as const,
+      };
 
-    const response = {
-      status: "success",
-      message: "Komentar berhasil ditambahkan",
-    };
+      const response = {
+        status: "success",
+        message: "Berhasil",
+      };
 
-    mockApiFetch.mockResolvedValue(response);
+      vi.mocked(apiFetch).mockResolvedValue(response);
 
-    const result = await addComment(50, data);
+      const result = await likePost(9, data);
 
-    expect(result).toEqual(response);
+      expect(apiFetch).toHaveBeenCalledWith(
+        "/api/v1/posts/9/likes",
+        {
+          method: "POST",
+          body: JSON.stringify(data),
+        }
+      );
 
-    expect(mockApiFetch).toHaveBeenCalledWith(
-      "/api/v1/posts/50/comments",
-      {
-        method: "POST",
-        body: JSON.stringify(data),
-      }
-    );
+      expect(result).toEqual(response);
+    });
+
+    it("menghapus like", async () => {
+      const data = {
+        like: 0 as const,
+      };
+
+      const response = {
+        status: "success",
+        message: "Berhasil",
+      };
+
+      vi.mocked(apiFetch).mockResolvedValue(response);
+
+      const result = await likePost(9, data);
+
+      expect(apiFetch).toHaveBeenCalledWith(
+        "/api/v1/posts/9/likes",
+        {
+          method: "POST",
+          body: JSON.stringify(data),
+        }
+      );
+
+      expect(result).toEqual(response);
+    });
   });
 
-  it("deleteComment menghapus komentar pengguna", async () => {
-    const response = {
-      status: "success",
-      message: "Komentar berhasil dihapus",
-    };
+  describe("addComment", () => {
+    it("menambahkan komentar", async () => {
+      const data = {
+        comment: "Komentar baru",
+      };
 
-    mockApiFetch.mockResolvedValue(response);
+      const response = {
+        status: "success",
+        message: "Berhasil",
+      };
 
-    const result = await deleteComment(60);
+      vi.mocked(apiFetch).mockResolvedValue(response);
 
-    expect(result).toEqual(response);
+      const result = await addComment(3, data);
 
-    expect(mockApiFetch).toHaveBeenCalledWith(
-      "/api/v1/posts/60/comments",
-      {
-        method: "DELETE",
-      }
-    );
+      expect(apiFetch).toHaveBeenCalledWith(
+        "/api/v1/posts/3/comments",
+        {
+          method: "POST",
+          body: JSON.stringify(data),
+        }
+      );
+
+      expect(result).toEqual(response);
+    });
   });
 
-  it("deleteAllPosts menghapus seluruh postingan pengguna", async () => {
-    const response = {
-      status: "success",
-      message: "Semua postingan berhasil dihapus",
-    };
+  describe("deleteComment", () => {
+    it("menghapus komentar", async () => {
+      const response = {
+        status: "success",
+        message: "Berhasil",
+      };
 
-    mockApiFetch.mockResolvedValue(response);
+      vi.mocked(apiFetch).mockResolvedValue(response);
 
-    const result = await deleteAllPosts();
+      const result = await deleteComment(4);
 
-    expect(result).toEqual(response);
+      expect(apiFetch).toHaveBeenCalledWith(
+        "/api/v1/posts/4/comments",
+        {
+          method: "DELETE",
+        }
+      );
 
-    expect(mockApiFetch).toHaveBeenCalledWith(
-      "/api/v1/posts",
-      {
-        method: "DELETE",
-      }
-    );
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe("deleteAllPosts", () => {
+    it("menghapus semua postingan", async () => {
+      const response = {
+        status: "success",
+        message: "Berhasil",
+      };
+
+      vi.mocked(apiFetch).mockResolvedValue(response);
+
+      const result = await deleteAllPosts();
+
+      expect(apiFetch).toHaveBeenCalledWith(
+        "/api/v1/posts",
+        {
+          method: "DELETE",
+        }
+      );
+
+      expect(result).toEqual(response);
+    });
   });
 });
