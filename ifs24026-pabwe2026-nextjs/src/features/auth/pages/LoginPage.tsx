@@ -85,14 +85,14 @@ export default function LoginPage() {
       >
         <div>
           <label
-            htmlFor="email"
+            htmlFor="login-email-input"
             className="mb-2 block text-sm font-semibold text-slate-700"
           >
             Email
           </label>
 
           <input
-            id="email"
+            id="login-email-input"
             type="email"
             value={email}
             onChange={(event) =>
@@ -106,14 +106,14 @@ export default function LoginPage() {
 
         <div>
           <label
-            htmlFor="password"
+            htmlFor="login-password-input"
             className="mb-2 block text-sm font-semibold text-slate-700"
           >
             Password
           </label>
 
           <input
-            id="password"
+            id="login-password-input"
             type="password"
             value={password}
             onChange={(event) =>
@@ -126,6 +126,7 @@ export default function LoginPage() {
         </div>
 
         <button
+          id="login-submit-button"
           type="submit"
           disabled={isAuthLogin}
           className="w-full rounded-xl bg-yellow-400 px-4 py-3 text-sm font-bold text-slate-900 transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-60"
